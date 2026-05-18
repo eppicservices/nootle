@@ -14,10 +14,10 @@ Outputs:
   - public/nootle-icon.svg  (synced to source)
   - site/public/nootle-icon.png  (1024×1024 marketing)
   - site/public/nootle-icon.svg  (synced to source)
-  - src-tauri/dmg/background.png  (660×400 macOS installer background)
-  - src-tauri/dmg/background@2x.png  (1320×800 retina installer background)
+  - src-tauri/dmg/background.png  (1320×800 @ 144 DPI macOS installer background)
 
-Requires: cairosvg, Pillow, iconutil (macOS).
+Requires: cairosvg, Pillow. iconutil is needed only when regenerating
+src-tauri/icons/icon.icns (macOS only); otherwise it is skipped.
 """
 
 import shutil
@@ -46,10 +46,39 @@ def render(svg_path: Path, out_path: Path, size: int) -> None:
     cairosvg.svg2png(url=str(svg_path), write_to=str(out_path), output_width=size, output_height=size)
 
 
-def render_dmg_background(out_path: Path, scale: int) -> None:
-    """Render the DMG background with text drawn via Pillow so the
+def set_weight(font: ImageFont.FreeTypeFont, weight: int) -> None:
+    """Set the Weight axis on a variable font while leaving other axes
+    (such as DM Sans's Optical Size) at their defaults. Passing a bare
+    list to set_variation_by_axes maps positionally, so DM Sans would
+    receive the weight value on its Optical Size axis instead."""
+    try:
+        axes = font.get_variation_axes()
+    except (AttributeError, OSError):
+        return
+    if not axes:
+        return
+    values = []
+    for axis in axes:
+        name = axis.get("name", b"").decode("ascii", "ignore").lower()
+        if name == "weight":
+            values.append(weight)
+        elif "default" in axis:
+            values.append(axis["default"])
+        else:
+            return
+    try:
+        font.set_variation_by_axes(values)
+    except (AttributeError, OSError):
+        pass
+
+
+def render_dmg_background(out_path: Path) -> None:
+    """Render the DMG background at 2× resolution with 144 DPI metadata
+    so macOS Finder displays it crisply on Retina while still fitting
+    the 660×400 point DMG window. Text is drawn via Pillow so the
     Outfit/DM Sans typefaces match the rest of the Nootle brand
     regardless of the host system's installed fonts."""
+    scale = 2
     width = DMG_BG_WIDTH * scale
     height = DMG_BG_HEIGHT * scale
     cairosvg.svg2png(
@@ -62,17 +91,13 @@ def render_dmg_background(out_path: Path, scale: int) -> None:
     draw = ImageDraw.Draw(image)
 
     title = ImageFont.truetype(str(DMG_FONT_OUTFIT), 34 * scale)
-    try:
-        title.set_variation_by_axes([700])
-    except (AttributeError, OSError):
-        pass
+    set_weight(title, 700)
     subtitle = ImageFont.truetype(str(DMG_FONT_DM_SANS), 14 * scale)
+    set_weight(subtitle, 400)
     instruction = ImageFont.truetype(str(DMG_FONT_DM_SANS), 14 * scale)
+    set_weight(instruction, 500)
     badge = ImageFont.truetype(str(DMG_FONT_DM_SANS), 11 * scale)
-    try:
-        badge.set_variation_by_axes([500])
-    except (AttributeError, OSError):
-        pass
+    set_weight(badge, 600)
 
     def centered(text: str, font: ImageFont.FreeTypeFont, y: int, fill: tuple[int, int, int]) -> None:
         left, top, right, bottom = font.getbbox(text)
@@ -84,7 +109,7 @@ def render_dmg_background(out_path: Path, scale: int) -> None:
     centered("Drag Nootle to your Applications folder to install", instruction, 320, (91, 33, 182))
     centered("LOCAL  ·  PRIVATE  ·  ON-DEVICE", badge, 360, (109, 40, 217))
 
-    image.save(out_path, format="PNG")
+    image.save(out_path, format="PNG", dpi=(72 * scale, 72 * scale))
 
 
 def main() -> None:
@@ -136,12 +161,15 @@ def main() -> None:
         ("icon_512x512.png", 512),
         ("icon_512x512@2x.png", 1024),
     ]
-    with tempfile.TemporaryDirectory() as td:
-        iconset = Path(td) / "icon.iconset"
-        iconset.mkdir()
-        for name, size in iconset_sizes:
-            render(SRC_SVG, iconset / name, size)
-        subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns_path)], check=True)
+    if shutil.which("iconutil"):
+        with tempfile.TemporaryDirectory() as td:
+            iconset = Path(td) / "icon.iconset"
+            iconset.mkdir()
+            for name, size in iconset_sizes:
+                render(SRC_SVG, iconset / name, size)
+            subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(icns_path)], check=True)
+    else:
+        print(f"skipping {icns_path.name}: iconutil not available (macOS only)")
 
     PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
     SITE_PUBLIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,8 +180,8 @@ def main() -> None:
 
     if DMG_BG_SVG.exists() and DMG_FONT_OUTFIT.exists() and DMG_FONT_DM_SANS.exists():
         DMG_DIR.mkdir(parents=True, exist_ok=True)
-        render_dmg_background(DMG_DIR / "background.png", scale=1)
-        render_dmg_background(DMG_DIR / "background@2x.png", scale=2)
+        render_dmg_background(DMG_DIR / "background.png")
+        (DMG_DIR / "background@2x.png").unlink(missing_ok=True)
 
     print("done")
 
