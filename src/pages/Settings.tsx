@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible } from "@/components/Collapsible";
 import { useApiKeys } from "@/hooks/useApiKeys";
 import { useLLM } from "@/hooks/useLLM";
-import { useModelDownload } from "@/hooks/useModelDownload";
+import { useModelDownload, MODELS_REQUIRING_AUTH } from "@/hooks/useModelDownload";
 import { useTheme } from "@/hooks/useTheme";
 
 import { useInsightTypes } from "@/hooks/useInsightTypes";
@@ -1032,11 +1032,6 @@ function PermissionsCard() {
     </Card>
   );
 }
-
-// Models whose source URLs are gated HuggingFace repos that return 401 without
-// auth. Hidden from the Models tab until we ship HF token support or migrate
-// to non-gated alternatives.
-const MODELS_REQUIRING_AUTH = new Set(["deepfilternet3", "vad-marblenet"]);
 
 function ModelManagementCard() {
   const {

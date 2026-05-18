@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+// Models whose source URLs are gated HuggingFace repos that return 401 without
+// auth. Hidden from the UI until we ship HF token support or migrate to
+// non-gated alternatives.
+export const MODELS_REQUIRING_AUTH = new Set(["deepfilternet3", "vad-marblenet"]);
+
 export interface ModelFile {
   local_name: string;
   url: string;
