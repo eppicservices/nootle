@@ -10,6 +10,7 @@ export function useScratchPad(meetingId: string | null) {
   const refresh = useCallback(async () => {
     if (!meetingId) {
       setNotes([]);
+      setLoading(false);
       return;
     }
     try {

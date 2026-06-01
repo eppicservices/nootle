@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChatMessage } from "@/types";
 
@@ -8,6 +8,13 @@ export function useChat(meetingId: string) {
   const [error, setError] = useState<string | null>(null);
   const latestMessagesRef = useRef<ChatMessage[]>(messages);
   latestMessagesRef.current = messages;
+
+  // Reset chat when switching to a different meeting so messages from a
+  // previous meeting don't leak into the new one.
+  useEffect(() => {
+    setMessages([]);
+    setError(null);
+  }, [meetingId]);
 
   const sendMessage = useCallback(
     async (message: string, provider: string, model: string) => {

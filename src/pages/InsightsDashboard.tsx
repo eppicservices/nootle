@@ -386,6 +386,10 @@ export function InsightsDashboard() {
     }, 300);
   };
 
+  useEffect(() => {
+    return () => clearTimeout(debounceRef.current);
+  }, []);
+
   const handleNavigate = (meetingId: string) => {
     navigate(`/meeting/${meetingId}`);
   };

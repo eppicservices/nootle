@@ -31,6 +31,7 @@ export function WorkflowsManager() {
   const [formActionType, setFormActionType] = useState("");
   const [formConfig, setFormConfig] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
 
   const connectedIntegrations = integrations.filter((i) =>
     INTEGRATION_TYPES.some((t) => t.type === i.integration_type),
@@ -301,7 +302,7 @@ export function WorkflowsManager() {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => deleteWorkflow(wf.id)}
+                        onClick={() => setDeleteTarget(wf)}
                         disabled={editing !== null}
                         title="Delete"
                       >
@@ -315,6 +316,38 @@ export function WorkflowsManager() {
           </div>
         )}
       </CardContent>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete workflow?</DialogTitle>
+            <DialogDescription>
+              Permanently delete{" "}
+              <span className="font-medium text-foreground">{deleteTarget?.name}</span>.
+              Past runs stay in their meeting history.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (deleteTarget) {
+                  await deleteWorkflow(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

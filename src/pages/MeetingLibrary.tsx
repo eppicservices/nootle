@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,7 @@ export function MeetingLibrary() {
   const navigate = useNavigate();
   const { isCompact } = useCompactMode();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">(() => {
     return (localStorage.getItem("meetingViewMode") as "grid" | "list") || "grid";
   });
@@ -99,8 +100,15 @@ export function MeetingLibrary() {
       LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)],
   );
   const [activeLabelIds, setActiveLabelIds] = useState<Set<string>>(new Set());
+
+  // Debounce search input so we don't hit the backend on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const { meetings, loading, refresh } = useMeetings(
-    search || undefined,
+    debouncedSearch || undefined,
     showArchived,
   );
   const { labels, meetingLabelsMap, addMeetingLabel, removeMeetingLabel, createLabel } = useLabels();

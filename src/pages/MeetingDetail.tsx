@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MotionButton } from "@/components/MotionButton";
@@ -116,6 +116,15 @@ function ActionItemRow({
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState(item.due_date ?? "");
   const isDone = item.status === "done";
+
+  // Sync local edit state with the item when it refreshes (e.g. after a
+  // re-extract) — otherwise we'd keep showing stale values.
+  useEffect(() => {
+    if (!editingAssignee) setAssignee(item.assignee ?? "");
+  }, [item.assignee, editingAssignee]);
+  useEffect(() => {
+    if (!editingDueDate) setDueDate(item.due_date ?? "");
+  }, [item.due_date, editingDueDate]);
 
   const handleAssigneeSave = () => {
     setEditingAssignee(false);
@@ -1310,9 +1319,9 @@ export function MeetingDetail() {
                       <p>No workflow runs yet.</p>
                       <p>
                         Configure workflows under{" "}
-                        <a href="/templates" className="text-primary underline-offset-2 hover:underline">
+                        <Link to="/templates" className="text-primary underline-offset-2 hover:underline">
                           Templates &rarr; Workflows
-                        </a>
+                        </Link>
                         , then toggle them on. Each enabled workflow shows as a
                         button next to <span className="font-medium">Ask Nootle</span> at
                         the top of this page — click it to run the workflow on this meeting.

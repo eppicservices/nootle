@@ -110,10 +110,20 @@ export function GlobalChatPanel() {
 
   useEffect(() => {
     if (!isDragging) return;
+    const PANEL_WIDTH = 400;
+    const PANEL_HEIGHT = 600;
+    const MARGIN = 8;
     const handleMove = (e: MouseEvent) => {
+      const rawRight =
+        dragStartRef.current.right - (e.clientX - dragStartRef.current.x);
+      const rawBottom =
+        dragStartRef.current.bottom - (e.clientY - dragStartRef.current.y);
+      // Clamp so the panel stays on-screen.
+      const maxRight = Math.max(MARGIN, window.innerWidth - PANEL_WIDTH - MARGIN);
+      const maxBottom = Math.max(MARGIN, window.innerHeight - PANEL_HEIGHT - MARGIN);
       setOffset({
-        right: dragStartRef.current.right - (e.clientX - dragStartRef.current.x),
-        bottom: dragStartRef.current.bottom - (e.clientY - dragStartRef.current.y),
+        right: Math.min(Math.max(rawRight, MARGIN), maxRight),
+        bottom: Math.min(Math.max(rawBottom, MARGIN), maxBottom),
       });
     };
     const handleUp = () => setIsDragging(false);
@@ -182,6 +192,7 @@ export function GlobalChatPanel() {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => setOpen(false)}
               >
                 <X className="h-4 w-4" />

@@ -57,6 +57,8 @@ export function TemplatesPage() {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [slashCommandError, setSlashCommandError] = useState("");
   const [activeTab, setActiveTab] = useState("templates");
+  const [deleteTemplateTarget, setDeleteTemplateTarget] = useState<Template | null>(null);
+  const [deleteRecipeTarget, setDeleteRecipeTarget] = useState<Recipe | null>(null);
 
   const handleSubmit = async () => {
     if (!newName.trim()) return;
@@ -431,7 +433,7 @@ export function TemplatesPage() {
                                     variant="ghost"
                                     size="icon-sm"
                                     className="text-muted-foreground hover:text-destructive"
-                                    onClick={() => deleteTemplate(template.id)}
+                                    onClick={() => setDeleteTemplateTarget(template)}
                                     title="Delete"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -526,7 +528,7 @@ export function TemplatesPage() {
                                     variant="ghost"
                                     size="icon-sm"
                                     className="text-muted-foreground hover:text-destructive"
-                                    onClick={() => deleteRecipe(recipe.id)}
+                                    onClick={() => setDeleteRecipeTarget(recipe)}
                                     title="Delete"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
@@ -566,6 +568,70 @@ export function TemplatesPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={deleteTemplateTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTemplateTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete template?</DialogTitle>
+            <DialogDescription>
+              Permanently delete{" "}
+              <span className="font-medium text-foreground">{deleteTemplateTarget?.name}</span>.
+              Past summaries created with it stay intact.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTemplateTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (deleteTemplateTarget) {
+                  await deleteTemplate(deleteTemplateTarget.id);
+                  setDeleteTemplateTarget(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteRecipeTarget !== null}
+        onOpenChange={(open) => !open && setDeleteRecipeTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete slash command?</DialogTitle>
+            <DialogDescription>
+              Permanently delete{" "}
+              <span className="font-medium text-foreground">/{deleteRecipeTarget?.slash_command}</span>.
+              You can recreate it later if you change your mind.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteRecipeTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (deleteRecipeTarget) {
+                  await deleteRecipe(deleteRecipeTarget.id);
+                  setDeleteRecipeTarget(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

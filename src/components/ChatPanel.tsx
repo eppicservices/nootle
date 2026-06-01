@@ -42,6 +42,13 @@ export function ChatPanel({ meetingId, open, onClose }: ChatPanelProps) {
     }
   }, [messages, recipeMessages]);
 
+  // Reset transient chat UI state when switching to a different meeting.
+  useEffect(() => {
+    setRecipeMessages([]);
+    setInput("");
+    setShowSlashMenu(false);
+  }, [meetingId]);
+
   const filteredRecipes = useMemo(() => {
     if (!input.startsWith("/")) return [];
     const query = input.slice(1).toLowerCase();
