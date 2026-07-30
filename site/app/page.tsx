@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { Introduction } from "@/components/Introduction";
-import { AppMockup } from "@/components/AppMockup";
+import { Screenshots } from "@/components/Screenshots";
 import { Features } from "@/components/Features";
 import { Comparison } from "@/components/Comparison";
 import { Integrations } from "@/components/Integrations";
@@ -17,7 +17,7 @@ export default function Home() {
       <Navbar />
       <Hero />
       <Introduction />
-      <AppMockup />
+      <Screenshots />
       <Features />
       <Comparison />
       <Integrations />

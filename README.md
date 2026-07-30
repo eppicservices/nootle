@@ -23,6 +23,64 @@ Nootle captures your meetings — microphone and system audio — transcribes th
 
 > **A note on privacy.** Recording and transcription are always local — meeting audio is never uploaded, and transcripts live only on your Mac. AI summaries and chat use whichever LLM provider you point Nootle at: pick **Ollama** (with a local model) to keep everything on-device, or use OpenAI, Anthropic, Google, Groq, OpenRouter, or AWS Bedrock with your own API key. You can also route through the **Claude Code CLI** (`claude -p`) or **Codex CLI** to reuse an existing Claude or ChatGPT subscription instead of an API key. Nootle is fully local end-to-end only when you use a local AI model.
 
+## Screenshots
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/library-dark.png" />
+    <img src="site/public/screenshots/library-light.png" alt="Nootle meeting library — recorded meetings with labels, dates, and durations" width="900" />
+  </picture>
+  <br />
+  <em>Every meeting in one library — searchable, labelled, and summarized.</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/recording-dark.png" />
+    <img src="site/public/screenshots/recording-light.png" alt="Nootle recording a meeting with a live transcript and notes" width="900" />
+  </picture>
+  <br />
+  <em>Record mic and system audio while the transcript builds in real time.</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/meeting-dark.png" />
+    <img src="site/public/screenshots/meeting-light.png" alt="Nootle meeting detail — speaker-labelled transcript beside an AI summary" width="900" />
+  </picture>
+  <br />
+  <em>Speaker-labelled transcript beside an AI summary you can jump around in.</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/insights-dark.png" />
+    <img src="site/public/screenshots/insights-light.png" alt="Nootle insights dashboard listing decisions and action items across meetings" width="900" />
+  </picture>
+  <br />
+  <em>Decisions, action items, and key moments pulled out of every meeting.</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/chat-dark.png" />
+    <img src="site/public/screenshots/chat-light.png" alt="Nootle chat answering a question about onboarding drop-off with sources cited" width="900" />
+  </picture>
+  <br />
+  <em>Ask questions across your whole meeting history, with citations.</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/automations-dark.png" />
+    <img src="site/public/screenshots/automations-light.png" alt="Nootle automations page showing summary templates" width="900" />
+  </picture>
+  <br />
+  <em>Templates and workflows so the right summary runs on its own.</em>
+</p>
+
+> Screenshots use fictional demo data. See [`scripts/screenshots`](scripts/screenshots) to regenerate them.
+
 ## Features
 
 - **Record everything** — capture microphone and system audio simultaneously
