@@ -106,6 +106,18 @@ pub fn update_meeting_title(
         .map_err(|e| e.to_string())
 }
 
+/// Changes which summary template a meeting will be summarized with. Pass
+/// `None` to clear it and fall back to the auto-run templates.
+#[tauri::command]
+pub fn update_meeting_template(
+    db: State<'_, DbState>,
+    id: String,
+    template_id: Option<String>,
+) -> Result<(), String> {
+    db.update_meeting_template(&id, template_id.as_deref())
+        .map_err(|e| e.to_string())
+}
+
 fn validate_hex_color(color: &str) -> Result<(), String> {
     if color.len() == 7
         && color.starts_with('#')

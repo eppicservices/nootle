@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 import { labelTextColor } from "@/lib/utils";
 import type { Label } from "@/types";
@@ -62,7 +64,7 @@ export function LabelEditor({
       {meetingLabels.map((label) => (
         <span
           key={label.id}
-          className="inline-flex items-center gap-1 rounded-full pl-2 pr-1 py-0.5 text-[11px] font-medium"
+          className="inline-flex items-center gap-1 rounded-full py-0.5 pr-1 pl-2 text-xs font-medium"
           style={{ backgroundColor: label.color, color: labelTextColor(label.color) }}
         >
           {label.name}
@@ -81,7 +83,7 @@ export function LabelEditor({
         <PopoverTrigger asChild>
           <button
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/40 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
           >
             <Plus className="h-3 w-3" />
             Label
@@ -113,22 +115,23 @@ export function LabelEditor({
             <div className="border-t pt-3 space-y-2">
               <p className="text-xs text-muted-foreground">Create new label</p>
               <div className="flex gap-2">
-                <input
+                <Input
                   value={newLabelName}
                   onChange={(e) => setNewLabelName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleCreateLabel();
                   }}
                   placeholder="Label name"
-                  className="flex-1 h-7 rounded border bg-transparent px-2 text-sm"
+                  aria-label="New label name"
+                  className="h-8 flex-1 text-sm"
                 />
-                <button
+                <Button
+                  size="sm"
                   onClick={handleCreateLabel}
                   disabled={!newLabelName.trim()}
-                  className="h-7 rounded bg-primary px-2 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   Add
-                </button>
+                </Button>
               </div>
               <div className="flex gap-1.5 flex-wrap">
                 {LABEL_COLORS.map((color) => (

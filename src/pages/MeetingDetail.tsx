@@ -7,7 +7,13 @@ import { SparkleEffect } from "@/components/SparkleEffect";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select } from "@/components/ui/select";
 import { ChatPanel } from "@/components/ChatPanel";
+import { CopyButton } from "@/components/CopyButton";
+import { EmptyState } from "@/components/EmptyState";
+import { ActionItemCheckbox } from "@/components/ActionItemCheckbox";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
+import { insightIcon } from "@/lib/insightIcons";
 import { Collapsible } from "@/components/Collapsible";
 import { Markdown } from "@/components/Markdown";
 import { NotesEditor } from "@/components/NotesEditor";
@@ -28,7 +34,27 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Input } from "@/components/ui/input";
 import { LabelEditor } from "@/components/LabelEditor";
-import { ArrowLeft, MessageSquare, FileText, Play, Pause, Check, RotateCw, Lightbulb, ListChecks, Star, Pencil, AlignJustify, List, StickyNote, Sparkles, PanelLeftClose, PanelLeftOpen, Copy, CheckCheck, Zap, AlertTriangle, BarChart3, ChevronDown } from "lucide-react";
+import {
+  AlertTriangle,
+  AlignJustify,
+  ArrowLeft,
+  BarChart3,
+  Check,
+  ChevronDown,
+  FileText,
+  Lightbulb,
+  List,
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pause,
+  Pencil,
+  Play,
+  RotateCw,
+  Sparkles,
+  StickyNote,
+  Zap,
+} from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useCompactMode } from "@/contexts/CompactModeContext";
 import { useWorkflows, useWorkflowRuns } from "@/hooks/useWorkflows";
@@ -68,38 +94,18 @@ function parseEmailDraft(output: string | null): { subject: string; body: string
   return { subject: match[1], body: match[2] };
 }
 
-function CopyButton({ text, className = "" }: { text: string; className?: string }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <button
-      onClick={handleCopy}
-      className={`inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ${className}`}
-      title="Copy to clipboard"
-    >
-      {copied ? <CheckCheck className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
-    </button>
-  );
-}
-
 const speakerColors = [
   "text-chart-1",
   "text-chart-2",
   "text-chart-3",
   "text-chart-4",
   "text-chart-5",
-  "text-primary",
+  "text-chart-6",
 ];
 
 function formatPlayerTime(seconds: number): string {
   if (!seconds || !isFinite(seconds)) return "00:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return formatMs(seconds * 1000);
 }
 
 function ActionItemRow({
@@ -142,19 +148,13 @@ function ActionItemRow({
 
   return (
     <div className="flex items-start gap-2 rounded-md border p-3 group/action">
-      <button
-        role="checkbox"
-        aria-checked={isDone}
-        aria-label={`Mark "${item.content.slice(0, 60)}" as ${isDone ? "open" : "done"}`}
-        onClick={() => item.action_item_id && onToggle(item.action_item_id, item.status ?? "open")}
-        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-          isDone
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-muted-foreground hover:border-primary"
-        }`}
-      >
-        {isDone && <Check className="h-3 w-3" />}
-      </button>
+      <ActionItemCheckbox
+        done={isDone}
+        label={item.content}
+        onToggle={() => {
+          if (item.action_item_id) onToggle(item.action_item_id, item.status ?? "open");
+        }}
+      />
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-start gap-2">
           <p className={`text-sm leading-relaxed flex-1 ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
@@ -162,47 +162,49 @@ function ActionItemRow({
           </p>
           <CopyButton text={item.content} className="opacity-0 group-hover/action:opacity-100 shrink-0 mt-0.5" />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={isDone ? "secondary" : "outline"} className="text-[10px]">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant={isDone ? "secondary" : "outline"} size="sm">
             {isDone ? "Done" : "Open"}
           </Badge>
           {editingAssignee ? (
-            <input
+            <Input
               autoFocus
               value={assignee}
               onChange={(e) => setAssignee(e.target.value)}
               onBlur={handleAssigneeSave}
               onKeyDown={(e) => e.key === "Enter" && handleAssigneeSave()}
               placeholder="Assignee"
-              className="h-5 w-24 rounded border bg-transparent px-1 text-[10px]"
+              aria-label="Assignee"
+              className="h-6 w-28 px-1.5 text-xs"
             />
           ) : (
             <button
               onClick={() => setEditingAssignee(true)}
-              className="text-[10px] text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground transition-colors hover:text-foreground"
             >
               {item.assignee || "Assign"}
             </button>
           )}
           {editingDueDate ? (
-            <input
+            <Input
               autoFocus
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               onBlur={handleDueDateSave}
-              className="h-5 rounded border bg-transparent px-1 text-[10px]"
+              aria-label="Due date"
+              className="h-6 w-auto px-1.5 text-xs"
             />
           ) : (
             <button
               onClick={() => setEditingDueDate(true)}
-              className="text-[10px] text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground transition-colors hover:text-foreground"
             >
               {item.due_date || "Due date"}
             </button>
           )}
           {item.transcript_start_ms != null && (
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="font-mono text-muted-foreground">
               {formatMs(item.transcript_start_ms)}
             </span>
           )}
@@ -235,7 +237,7 @@ function InsightSection({
       >
         <Icon className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm font-semibold">{title}</span>
-        <Badge variant="secondary" className="text-[10px]">
+        <Badge variant="secondary" size="sm">
           {items.length}
         </Badge>
         <span className="ml-auto text-xs text-muted-foreground">
@@ -298,20 +300,10 @@ function InsightsPanel({
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <p className="text-sm text-muted-foreground">Sifting through the good stuff...</p>
-      </div>
-    );
+    return <LoadingState message={LOADING_COPY.insights} />;
   }
 
   const noProviders = providers.length === 0;
-
-  const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    lightbulb: Lightbulb,
-    "list-checks": ListChecks,
-    star: Star,
-  };
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -342,19 +334,20 @@ function InsightsPanel({
 
       <ScrollArea className="flex-1">
         {!hasInsights ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
-            <Lightbulb className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground text-center">
-              {noProviders
+          <EmptyState
+            icon={Lightbulb}
+            size="panel"
+            description={
+              noProviders
                 ? "Add an AI provider in Settings to extract insights."
-                : "No insights yet. Select a provider and model above to extract them."}
-            </p>
-          </div>
+                : "No insights yet. Select a provider and model above to extract them."
+            }
+          />
         ) : (
           <div className="space-y-6 p-5">
             {insightTypes.map((t) => {
               const items = groupedByType[t.slug] ?? [];
-              const Icon = iconMap[t.icon] ?? Lightbulb;
+              const Icon = insightIcon(t.icon);
               return (
                 <InsightSection
                   key={t.slug}
@@ -375,7 +368,7 @@ function InsightsPanel({
                           <CopyButton text={item.content} className="opacity-0 group-hover/insight:opacity-100 shrink-0 mt-0.5" />
                         </div>
                         {item.transcript_start_ms != null && (
-                          <span className="text-[10px] font-mono text-muted-foreground">
+                          <span className="font-mono text-xs text-muted-foreground">
                             {formatMs(item.transcript_start_ms)}
                           </span>
                         )}
@@ -488,14 +481,16 @@ function CreateTicketButton({
 
       {open && (
         <div className="mt-2 space-y-2 rounded-md border p-3">
-          <select
+          <Select
+            size="sm"
+            containerClassName="w-full"
             value={teamId}
             onChange={(e) => {
               setTeamId(e.target.value);
               setProjectId("");
               onTeamChange(e.target.value || null);
             }}
-            className="h-8 w-full rounded-md border bg-transparent px-2 text-xs"
+            aria-label="Linear team"
           >
             <option value="">Select team</option>
             {teams.map((t) => (
@@ -503,12 +498,14 @@ function CreateTicketButton({
                 {t.name} ({t.key})
               </option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
+            size="sm"
+            containerClassName="w-full"
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
             disabled={!teamId}
-            className="h-8 w-full rounded-md border bg-transparent px-2 text-xs"
+            aria-label="Linear project"
           >
             <option value="">No project</option>
             {projects.map((p) => (
@@ -516,7 +513,7 @@ function CreateTicketButton({
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
           {error && (
             <p className="text-xs text-destructive">{error}</p>
           )}
@@ -596,28 +593,23 @@ function NotesPanel({
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <StickyNote className="h-3.5 w-3.5 text-amber-500" />
+          <StickyNote className="h-3.5 w-3.5 text-highlight" />
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Quick notes captured during recording
           </h3>
         </div>
         <div className="space-y-1.5">
-          {scratchNotes.map((note) => {
-            const totalSec = Math.floor(note.timestamp_ms / 1000);
-            const minutes = String(Math.floor(totalSec / 60)).padStart(2, "0");
-            const seconds = String(totalSec % 60).padStart(2, "0");
-            return (
-              <div
-                key={note.id}
-                className="rounded-lg bg-amber-500/5 border border-amber-500/10 px-3 py-2 flex items-start gap-3"
-              >
-                <span className="font-mono text-xs text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
-                  {minutes}:{seconds}
-                </span>
-                <span className="text-sm text-foreground leading-relaxed">{note.content}</span>
-              </div>
-            );
-          })}
+          {scratchNotes.map((note) => (
+            <div
+              key={note.id}
+              className="flex items-start gap-3 rounded-lg border border-highlight/20 bg-highlight/5 px-3 py-2"
+            >
+              <span className="mt-0.5 shrink-0 font-mono text-xs text-highlight-foreground">
+                {formatMs(note.timestamp_ms)}
+              </span>
+              <span className="text-sm leading-relaxed text-foreground">{note.content}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -632,12 +624,11 @@ function NotesPanel({
       );
     }
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8">
-        <StickyNote className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground text-center">
-          No notes for this meeting. Take notes during recording to see them here.
-        </p>
-      </div>
+      <EmptyState
+        icon={StickyNote}
+        size="panel"
+        description="No notes for this meeting. Take notes during recording to see them here."
+      />
     );
   }
 
@@ -934,21 +925,21 @@ export function MeetingDetail() {
   };
 
   if (meetingLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading meeting...</p>
-      </div>
-    );
+    return <LoadingState message={LOADING_COPY.meeting} />;
   }
 
   if (!meeting) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4">
-        <p className="text-sm text-muted-foreground">Meeting not found</p>
-        <Button variant="outline" onClick={() => navigate("/")}>
-          Back to Meetings
-        </Button>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="Meeting not found"
+        description="It may have been deleted."
+        action={
+          <Button variant="outline" onClick={() => navigate("/")}>
+            Back to Meetings
+          </Button>
+        }
+      />
     );
   }
 
@@ -991,7 +982,7 @@ export function MeetingDetail() {
                   <Pencil className="h-3.5 w-3.5 opacity-0 group-hover/title:opacity-50 transition-opacity" />
                 </h1>
               )}
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" size="sm">
                 {statusLabel(meeting.status)}
               </Badge>
             </div>
@@ -1065,9 +1056,9 @@ export function MeetingDetail() {
                             {isRunning ? (
                               <RotateCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                             ) : succeeded ? (
-                              <Check className="h-3.5 w-3.5 text-green-500" />
+                              <Check className="h-3.5 w-3.5 text-success-foreground" />
                             ) : failed ? (
-                              <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                             ) : w.icon ? (
                               <span>{w.icon}</span>
                             ) : (
@@ -1134,9 +1125,10 @@ export function MeetingDetail() {
                 <ScrollArea className="flex-1">
                   <div className={`px-8 py-4 ${compactTranscript ? "space-y-1" : "space-y-4"}`}>
                     {transcriptLoading ? (
-                      <p className="text-sm text-muted-foreground">
-                        Unspooling the transcript...
-                      </p>
+                      <LoadingState
+                        message={LOADING_COPY.transcript}
+                        layout="inline"
+                      />
                     ) : segments.length === 0 ? (
                       <p className="text-sm text-muted-foreground italic">
                         No transcript here — this one's a mystery
@@ -1216,16 +1208,17 @@ export function MeetingDetail() {
             </TabsContent>
             <TabsContent value="summaries" className="flex flex-1 flex-col mt-0">
               <div className="flex items-center gap-2 border-b px-5 py-2 flex-wrap">
-                <select
+                <Select
+                  size="xs"
                   value={selectedTemplate}
                   onChange={(e) => setSelectedTemplate(e.target.value)}
-                  className="h-7 rounded-md border bg-transparent px-2 text-xs"
+                  aria-label="Summary template"
                 >
                   <option value="">Template</option>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
-                </select>
+                </Select>
                 <div className="relative">
                   <MotionButton
                     size="sm"
@@ -1252,15 +1245,14 @@ export function MeetingDetail() {
 
               <ScrollArea className="flex-1">
                 {summaries.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center p-8 gap-2">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      No summaries yet. Pick a prompt above and let Nootle distill the conversation.
-                    </p>
-                  </div>
+                  <EmptyState
+                    icon={FileText}
+                    size="panel"
+                    description="No summaries yet. Pick a template above and let Nootle distill the conversation."
+                  />
                 ) : (
                   <div className="p-5 space-y-6">
-                    {summaries.map((s) => {
+                    {summaries.map((s, index) => {
                       const tmpl = s.template_id
                         ? templates.find((t) => t.id === s.template_id)
                         : null;
@@ -1270,7 +1262,7 @@ export function MeetingDetail() {
                             <span className="text-xs font-medium text-foreground">
                               {tmpl?.name ?? "Summary"}
                             </span>
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {s.provider}/{s.model}
                             </span>
                             <CopyButton text={s.content} className="ml-auto" />
@@ -1291,7 +1283,7 @@ export function MeetingDetail() {
                               />
                             </div>
                           )}
-                          {summaries.indexOf(s) < summaries.length - 1 && (
+                          {index < summaries.length - 1 && (
                             <hr className="mt-6 border-border" />
                           )}
                         </div>
@@ -1320,7 +1312,7 @@ export function MeetingDetail() {
                       <p>
                         Configure workflows under{" "}
                         <Link to="/templates" className="text-primary underline-offset-2 hover:underline">
-                          Templates &rarr; Workflows
+                          Automations &rarr; Workflows
                         </Link>
                         , then toggle them on. Each enabled workflow shows as a
                         button next to <span className="font-medium">Ask Nootle</span> at
@@ -1365,11 +1357,11 @@ export function MeetingDetail() {
                                   >
                                     Open in Mail
                                   </Button>
-                                  <CopyButton text={output} className="h-7 text-xs px-2" />
+                                  <CopyButton variant="button" text={output} label="Copy output" />
                                 </div>
                               )}
                               {!emailDraft && (
-                                <CopyButton text={output} className="h-7 text-xs px-2" />
+                                <CopyButton variant="button" text={output} label="Copy output" />
                               )}
                               <pre className="rounded-md border bg-muted/40 p-3 text-xs whitespace-pre-wrap break-words max-h-64 overflow-y-auto">
                                 {output}

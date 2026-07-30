@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MotionButton } from "@/components/MotionButton";
 import { ThinkingDots } from "@/components/ThinkingDots";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Markdown } from "@/components/Markdown";
@@ -202,33 +203,34 @@ export function GlobalChatPanel() {
             {/* Filters */}
             <div className="flex flex-col gap-2 px-4 py-2 border-b">
               <div className="flex items-center gap-2">
-                <select
+                <Select
+                  size="xs"
+                  containerClassName="flex-1"
                   value={selectedLabel}
                   onChange={(e) => handleLabelChange(e.target.value)}
                   aria-label="Filter by label"
-                  className="h-7 flex-1 rounded-md border bg-transparent px-2 text-xs"
                 >
-                  <option value="">All Labels</option>
+                  <option value="">All labels</option>
                   {labels.map((label) => (
                     <option key={label.id} value={label.id}>
                       {label.name}
                     </option>
                   ))}
-                </select>
-                <select
+                </Select>
+                <Select
+                  size="xs"
                   value={selectedDatePreset}
                   onChange={(e) =>
                     handleDatePresetChange(Number(e.target.value))
                   }
                   aria-label="Filter by date range"
-                  className="h-7 rounded-md border bg-transparent px-2 text-xs"
                 >
                   {DATE_PRESETS.map((preset, i) => (
                     <option key={i} value={i}>
                       {preset.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               {embeddingStatus && (

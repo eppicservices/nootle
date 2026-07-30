@@ -1255,6 +1255,20 @@ impl Database {
         Ok(())
     }
 
+    /// Sets (or clears, with `None`) the summary template this meeting should be
+    /// summarized with once transcription finishes.
+    pub fn update_meeting_template(&self, id: &str, template_id: Option<&str>) -> Result<()> {
+        let conn = self.lock_conn()?;
+        let now = chrono::Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE meetings SET template_id = ?1, updated_at = ?2 WHERE id = ?3",
+            params![template_id, now, id],
+        )?;
+
+        Ok(())
+    }
+
     pub fn update_meeting_notes(&self, id: &str, raw_notes: &str) -> Result<()> {
         let conn = self.lock_conn()?;
         let now = chrono::Utc::now().to_rfc3339();

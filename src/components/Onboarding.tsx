@@ -104,7 +104,7 @@ export function Onboarding({ onComplete }: { onComplete: () => void }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className="mx-auto w-full max-w-lg overflow-y-auto max-h-[90vh] rounded-2xl border border-border bg-card p-8 shadow-2xl"
+            className="mx-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border bg-card p-8 shadow-lg"
           >
             {/* Progress dots */}
             <div className="mb-8 flex justify-center gap-2">
@@ -397,17 +397,14 @@ function ModelsStep({ onNext }: { onNext: () => void }) {
           return (
             <div
               key={model.id}
-              className="rounded-lg border border-border p-4"
+              className="rounded-lg border p-4"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-medium text-foreground">
                   {model.name}
                 </span>
                 {status?.downloaded && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-green-500/15 text-green-500 text-[10px]"
-                  >
+                  <Badge variant="success" size="sm">
                     Downloaded
                   </Badge>
                 )}
@@ -541,7 +538,7 @@ function PermissionRow({
   buttonLabel?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+    <div className="flex items-center gap-3 rounded-lg border p-3">
       <span className="text-muted-foreground">{icon}</span>
       <div className="flex-1">
         <p className="font-medium text-foreground">{title}</p>
@@ -553,9 +550,7 @@ function PermissionRow({
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 0.3 }}
         >
-          <Badge variant="secondary" className="bg-green-500/15 text-green-600 dark:text-green-400">
-            Granted
-          </Badge>
+          <Badge variant="success">Granted</Badge>
         </motion.div>
       ) : (
         <Button

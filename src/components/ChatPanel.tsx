@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ResizeHandle } from "@/components/ResizeHandle";
+import { Markdown } from "@/components/Markdown";
 import { useChat } from "@/hooks/useChat";
 import { useGlobalLLMSelection } from "@/contexts/LLMSelectionContext";
 import { useRecipes } from "@/hooks/useRecipes";
@@ -201,13 +202,17 @@ export function ChatPanel({ meetingId, open, onClose }: ChatPanelProps) {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-primary-foreground whitespace-pre-wrap"
                         : "bg-muted text-foreground"
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === "assistant" ? (
+                      <Markdown content={msg.content} />
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -268,7 +273,7 @@ export function ChatPanel({ meetingId, open, onClose }: ChatPanelProps) {
             <div className="flex items-center gap-2 p-3">
               <Input
                 ref={inputRef}
-                placeholder="Ask about this meeting... (type / for recipes)"
+                placeholder="Ask about this meeting... (type / for slash commands)"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}

@@ -5,25 +5,20 @@ import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHeader } from "@/components/PageHeader";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
 import { useAllInsights } from "@/hooks/useInsights";
 import { useApiKeys } from "@/hooks/useApiKeys";
 import { useLLM } from "@/hooks/useLLM";
 import { useLinearTeams, useLinearProjects, useLinearSettings } from "@/hooks/useLinear";
 import type { InsightWithActionItem, InsightType, LinearTeam } from "@/types";
-import { Check, Lightbulb, ListChecks, Star, Search, AlertTriangle, Ticket } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Search, Ticket } from "lucide-react";
+import { ActionItemCheckbox } from "@/components/ActionItemCheckbox";
 import { formatDate } from "@/lib/utils";
-
-const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
-  lightbulb: Lightbulb,
-  "list-checks": ListChecks,
-  star: Star,
-  "alert-triangle": AlertTriangle,
-};
-
-function getIcon(iconName: string): React.ComponentType<{ className?: string }> {
-  return ICON_MAP[iconName] ?? Lightbulb;
-}
+import { insightIcon } from "@/lib/insightIcons";
 
 function ActionItemTicketButton({
   item,
@@ -50,8 +45,8 @@ function ActionItemTicketButton({
 
   if (item.linear_ticket_id) {
     return (
-      <Badge variant="secondary" className="text-[10px] shrink-0">
-        <Ticket className="h-3 w-3 mr-1" />
+      <Badge variant="secondary" size="sm" className="shrink-0">
+        <Ticket />
         {item.linear_ticket_id}
       </Badge>
     );
@@ -101,51 +96,59 @@ function ActionItemTicketButton({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex gap-1.5">
-        <select
+        <Select
+          size="xs"
+          containerClassName="flex-1"
           value={teamId}
           onChange={(e) => setTeamId(e.target.value)}
-          className="h-7 flex-1 rounded border bg-transparent px-1 text-[11px]"
+          aria-label="Linear team"
         >
           <option value="">Team</option>
           {teams.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
+          size="xs"
+          containerClassName="flex-1"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
-          className="h-7 flex-1 rounded border bg-transparent px-1 text-[11px]"
+          aria-label="Linear project"
         >
           <option value="">Project</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="flex gap-1.5">
-        <select
+        <Select
+          size="xs"
+          containerClassName="flex-1"
           value={provider}
           onChange={(e) => {
             setProvider(e.target.value);
             setModel("");
           }}
-          className="h-7 flex-1 rounded border bg-transparent px-1 text-[11px]"
+          aria-label="LLM provider"
         >
           <option value="">Provider</option>
           {providers.map((p) => (
             <option key={p} value={p}>{p}</option>
           ))}
-        </select>
-        <select
+        </Select>
+        <Select
+          size="xs"
+          containerClassName="flex-1"
           value={model}
           onChange={(e) => setModel(e.target.value)}
-          className="h-7 flex-1 rounded border bg-transparent px-1 text-[11px]"
+          aria-label="LLM model"
         >
           <option value="">Model</option>
           {filteredModels.map((m) => (
             <option key={m.id} value={m.id}>{m.name}</option>
           ))}
-        </select>
+        </Select>
       </div>
       <div className="flex gap-1.5">
         <Button
@@ -160,7 +163,7 @@ function ActionItemTicketButton({
           Cancel
         </Button>
       </div>
-      {error && <p className="text-[10px] text-destructive">{error}</p>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -186,19 +189,13 @@ function DashboardActionItem({
       animate={{ opacity: 1, y: 0 }}
       className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-accent/30"
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
+      <ActionItemCheckbox
+        done={isDone}
+        label={item.content}
+        onToggle={() => {
           if (item.action_item_id) onToggle(item.action_item_id, item.status ?? "open");
         }}
-        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-          isDone
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-muted-foreground hover:border-primary"
-        }`}
-      >
-        {isDone && <Check className="h-3 w-3" />}
-      </button>
+      />
       <div
         className="min-w-0 flex-1 cursor-pointer"
         onClick={() => onNavigate(item.meeting_id)}
@@ -206,25 +203,17 @@ function DashboardActionItem({
         <p className={`text-sm leading-relaxed ${isDone ? "line-through text-muted-foreground" : "text-foreground"}`}>
           {item.content}
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <Badge variant={isDone ? "secondary" : "outline"} className="text-[10px]">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <Badge variant={isDone ? "secondary" : "outline"} size="sm">
             {isDone ? "Done" : "Open"}
           </Badge>
-          {item.assignee && (
-            <span className="text-[10px] text-muted-foreground">{item.assignee}</span>
-          )}
-          {item.due_date && (
-            <span className="text-[10px] text-muted-foreground">{item.due_date}</span>
-          )}
+          {item.assignee && <span>{item.assignee}</span>}
+          {item.due_date && <span>{item.due_date}</span>}
           {item.meeting_title && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-              {item.meeting_title}
-            </span>
+            <span className="max-w-[200px] truncate">{item.meeting_title}</span>
           )}
           {item.meeting_start_time && (
-            <span className="text-[10px] text-muted-foreground">
-              {formatDate(item.meeting_start_time)}
-            </span>
+            <span>{formatDate(item.meeting_start_time)}</span>
           )}
         </div>
       </div>
@@ -239,7 +228,7 @@ function InsightItem({
   onNavigate,
 }: {
   item: InsightWithActionItem;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   onNavigate: (meetingId: string) => void;
 }) {
   return (
@@ -252,16 +241,12 @@ function InsightItem({
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-relaxed">{item.content}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {item.meeting_title && (
-            <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-              {item.meeting_title}
-            </span>
+            <span className="max-w-[200px] truncate">{item.meeting_title}</span>
           )}
           {item.meeting_start_time && (
-            <span className="text-[10px] text-muted-foreground">
-              {formatDate(item.meeting_start_time)}
-            </span>
+            <span>{formatDate(item.meeting_start_time)}</span>
           )}
         </div>
       </div>
@@ -274,7 +259,7 @@ function SectionHeader({
   title,
   count,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   title: string;
   count: number;
 }) {
@@ -302,29 +287,22 @@ function TypeSection({
   onNavigate: (meetingId: string) => void;
   onTicketCreated: () => void;
 }) {
-  const Icon = getIcon(insightType.icon);
+  const Icon = insightIcon(insightType.icon);
 
   if (insightType.has_action_fields) {
-    const openItems = items.filter((i) => i.status !== "done");
-    const doneItems = items.filter((i) => i.status === "done");
+    // Open items first, done ones sink to the bottom.
+    const ordered = [
+      ...items.filter((i) => i.status !== "done"),
+      ...items.filter((i) => i.status === "done"),
+    ];
     return (
       <section>
         <SectionHeader icon={Icon} title={insightType.name + "s"} count={items.length} />
         <div className="space-y-2">
-          {openItems.length === 0 && doneItems.length === 0 && (
+          {ordered.length === 0 && (
             <p className="text-sm text-muted-foreground italic">No {insightType.name.toLowerCase()}s found</p>
           )}
-          {openItems.map((item) => (
-            <DashboardActionItem
-              key={item.id}
-              item={item}
-              teams={teams}
-              onToggle={toggleActionItem}
-              onNavigate={onNavigate}
-              onTicketCreated={onTicketCreated}
-            />
-          ))}
-          {doneItems.map((item) => (
+          {ordered.map((item) => (
             <DashboardActionItem
               key={item.id}
               item={item}
@@ -400,51 +378,48 @@ export function InsightsDashboard() {
       animate={{ opacity: 1 }}
       className="flex flex-1 flex-col"
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Insights</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Action items, decisions, and key moments extracted from your meetings
-          </p>
-        </div>
-        <div className="flex items-center gap-3 shrink-0 pt-1">
-          <select
-            value={typeFilter ?? ""}
-            onChange={(e) => setTypeFilter(e.target.value || undefined)}
-            className="h-8 rounded-md border bg-transparent px-2 text-sm"
-          >
-            <option value="">All types</option>
-            {insightTypes.map((t) => (
-              <option key={t.slug} value={t.slug}>{t.name}s</option>
-            ))}
-          </select>
-          <select
-            value={statusFilter ?? ""}
-            onChange={(e) => setStatusFilter(e.target.value || undefined)}
-            className="h-8 rounded-md border bg-transparent px-2 text-sm"
-          >
-            <option value="">All statuses</option>
-            <option value="open">Open</option>
-            <option value="done">Done</option>
-          </select>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search insights..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="h-8 w-56 pl-8 text-sm"
-            />
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Insights"
+        description="Action items, decisions, and key moments extracted from your meetings"
+        actions={
+          <>
+            <Select
+              size="sm"
+              value={typeFilter ?? ""}
+              onChange={(e) => setTypeFilter(e.target.value || undefined)}
+              aria-label="Filter by insight type"
+            >
+              <option value="">All types</option>
+              {insightTypes.map((t) => (
+                <option key={t.slug} value={t.slug}>{t.name}s</option>
+              ))}
+            </Select>
+            <Select
+              size="sm"
+              value={statusFilter ?? ""}
+              onChange={(e) => setStatusFilter(e.target.value || undefined)}
+              aria-label="Filter by status"
+            >
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="done">Done</option>
+            </Select>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search insights..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="h-8 w-56 pl-8"
+              />
+            </div>
+          </>
+        }
+      />
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-muted-foreground">Fishing out the good bits...</p>
-        </div>
+        <LoadingState message={LOADING_COPY.insights} />
       ) : (
         <ScrollArea className="flex-1">
           <div className="space-y-8 p-6">

@@ -1,13 +1,20 @@
 import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible } from "@/components/Collapsible";
+import { PageHeader } from "@/components/PageHeader";
+import { CopyButton } from "@/components/CopyButton";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
+import { INSIGHT_ICONS } from "@/lib/insightIcons";
 import { useApiKeys } from "@/hooks/useApiKeys";
 import { useLLM } from "@/hooks/useLLM";
 import { useModelDownload, MODELS_REQUIRING_AUTH } from "@/hooks/useModelDownload";
@@ -153,11 +160,9 @@ function IntegrationCard({ intType, connectedIntegration, onConnect, onDisconnec
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="text-sm font-medium">{intType.name}</span>
           {isConnected ? (
-            <Badge variant="secondary" className="bg-green-500/15 text-green-500 text-[10px]">
-              Connected
-            </Badge>
+            <Badge variant="success" size="sm">Connected</Badge>
           ) : (
-            <Badge variant="secondary" className="text-[10px]">Not Connected</Badge>
+            <Badge variant="secondary" size="sm">Not connected</Badge>
           )}
         </div>
         {isConnected ? (
@@ -211,8 +216,8 @@ function IntegrationCard({ intType, connectedIntegration, onConnect, onDisconnec
               ))}
               {isObsidian && (
                 <div className="space-y-2 pt-2">
-                  <label className="text-xs text-muted-foreground font-medium">Speaker Mapping</label>
-                  <p className="text-[11px] text-muted-foreground">Map transcript labels to names. Mapped names become [[wikilinks]] in Obsidian.</p>
+                  <label className="text-xs font-medium text-muted-foreground">Speaker Mapping</label>
+                  <p className="text-xs text-muted-foreground">Map transcript labels to names. Mapped names become [[wikilinks]] in Obsidian.</p>
                   {speakerKeys.map((key, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Input
@@ -293,7 +298,7 @@ function IntegrationsManager() {
       </CardHeader>
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <LoadingState message={LOADING_COPY.integrations} layout="inline" />
         ) : (
           <div className="divide-y">
             {INTEGRATION_TYPES.map((intType) => (
@@ -340,11 +345,7 @@ function ApiKeyRow({ provider, isStored, onSave, onDelete }: {
     <div className="flex items-center gap-3 py-3">
       <div className="flex items-center gap-2 w-32 shrink-0">
         <span className="text-sm font-medium">{PROVIDER_DISPLAY_NAMES[provider] ?? provider}</span>
-        {isStored && (
-          <Badge variant="secondary" className="text-[10px]">
-            Saved
-          </Badge>
-        )}
+        {isStored && <Badge variant="success" size="sm">Saved</Badge>}
       </div>
 
       {editing ? (
@@ -419,11 +420,7 @@ function AutoDetectedProviderRow({ provider, detected }: { provider: string; det
     <div className="flex items-center gap-3 py-3">
       <div className="flex items-center gap-2 w-48 shrink-0">
         <span className="text-sm font-medium">{PROVIDER_DISPLAY_NAMES[provider] ?? provider}</span>
-        {detected && (
-          <Badge variant="secondary" className="text-[10px]">
-            Detected
-          </Badge>
-        )}
+        {detected && <Badge variant="success" size="sm">Detected</Badge>}
       </div>
       <div className="flex-1 text-sm text-muted-foreground">
         {detected ? hint?.detected : hint?.notDetected}
@@ -501,12 +498,19 @@ function InsightTypesManager() {
                     className="h-8 flex-1"
                     placeholder="Name"
                   />
-                  <Input
+                  <Select
+                    size="sm"
+                    containerClassName="w-40"
                     value={editIcon}
                     onChange={(e) => setEditIcon(e.target.value)}
-                    className="h-8 w-32"
-                    placeholder="Icon"
-                  />
+                    aria-label="Icon"
+                  >
+                    {INSIGHT_ICONS.map((entry) => (
+                      <option key={entry.value} value={entry.value}>
+                        {entry.label}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
                 <Input
                   value={editDesc}
@@ -514,23 +518,19 @@ function InsightTypesManager() {
                   className="h-8"
                   placeholder="Description"
                 />
-                <textarea
+                <Textarea
                   value={editPrompt}
                   onChange={(e) => setEditPrompt(e.target.value)}
-                  className="w-full min-h-[80px] rounded-md border bg-transparent px-3 py-2 text-sm"
+                  className="min-h-20"
                   placeholder="Extraction prompt"
                 />
-                <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={editHasAction}
-                      onChange={(e) => setEditHasAction(e.target.checked)}
-                      className="accent-primary"
-                    />
-                    Has action fields (assignee, due date)
-                  </label>
-                </div>
+                <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={editHasAction}
+                    onCheckedChange={(checked) => setEditHasAction(checked === true)}
+                  />
+                  Has action fields (assignee, due date)
+                </label>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => handleSaveEdit(t.id)}>Save</Button>
                   <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -541,9 +541,9 @@ function InsightTypesManager() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">{t.name}</span>
-                    <Badge variant="secondary" className="text-[10px]">{t.slug}</Badge>
-                    {t.is_builtin && <Badge variant="outline" className="text-[10px]">Built-in</Badge>}
-                    {t.has_action_fields && <Badge variant="outline" className="text-[10px]">Action fields</Badge>}
+                    <Badge variant="secondary" size="sm">{t.slug}</Badge>
+                    {t.is_builtin && <Badge variant="outline" size="sm">Built-in</Badge>}
+                    {t.has_action_fields && <Badge variant="outline" size="sm">Action fields</Badge>}
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon-sm" onClick={() => startEditing(t)}>
@@ -592,12 +592,19 @@ function InsightTypesManager() {
                 className="h-8 w-40"
                 placeholder="Slug (e.g. risk)"
               />
-              <Input
+              <Select
+                size="sm"
+                containerClassName="w-40"
                 value={newIcon}
                 onChange={(e) => setNewIcon(e.target.value)}
-                className="h-8 w-32"
-                placeholder="Icon"
-              />
+                aria-label="Icon"
+              >
+                {INSIGHT_ICONS.map((entry) => (
+                  <option key={entry.value} value={entry.value}>
+                    {entry.label}
+                  </option>
+                ))}
+              </Select>
             </div>
             <Input
               value={newDesc}
@@ -605,23 +612,19 @@ function InsightTypesManager() {
               className="h-8"
               placeholder="Description (optional)"
             />
-            <textarea
+            <Textarea
               value={newPrompt}
               onChange={(e) => setNewPrompt(e.target.value)}
-              className="w-full min-h-[80px] rounded-md border bg-transparent px-3 py-2 text-sm"
+              className="min-h-20"
               placeholder="Extraction prompt — tell the LLM how to identify this type"
             />
-            <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={newHasAction}
-                  onChange={(e) => setNewHasAction(e.target.checked)}
-                  className="accent-primary"
-                />
-                Has action fields (assignee, due date)
-              </label>
-            </div>
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+              <Checkbox
+                checked={newHasAction}
+                onCheckedChange={(checked) => setNewHasAction(checked === true)}
+              />
+              Has action fields (assignee, due date)
+            </label>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || !newSlug.trim() || !newPrompt.trim()}>
                 Create
@@ -645,7 +648,6 @@ export function SettingsPage() {
   const { providers: llmProviders } = useLLM();
   const { theme, toggleTheme } = useTheme();
   const version = useAppVersion();
-  const [copied, setCopied] = useState<"json" | "claude" | false>(false);
   const [exePath, setExePath] = useState("/path/to/nootle");
   const [denoiseEnabled, setDenoiseEnabled] = useState(true);
   const [detectionEnabled, setDetectionEnabled] = useState(true);
@@ -676,17 +678,8 @@ export function SettingsPage() {
     });
   };
 
-  const handleCopyJson = useCallback(async () => {
-    await navigator.clipboard.writeText(getMcpConfig(exePath));
-    setCopied("json");
-    setTimeout(() => setCopied(false), 2000);
-  }, [exePath]);
-
-  const handleCopyClaude = useCallback(async () => {
-    await navigator.clipboard.writeText(getClaudeCommand(exePath));
-    setCopied("claude");
-    setTimeout(() => setCopied(false), 2000);
-  }, [exePath]);
+  const mcpConfig = getMcpConfig(exePath);
+  const claudeCommand = getClaudeCommand(exePath);
 
   // Exclude auto-detected providers — they're rendered in their own card below
   // since they don't take API keys.
@@ -697,27 +690,24 @@ export function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="border-b px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure API keys and application settings
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Configure API keys and application settings"
+      />
 
       <Tabs defaultValue="general" className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b px-6 py-4">
+        <div className="shrink-0 border-b px-6 py-4">
           <TabsList className="h-10">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="api-keys">API Keys</TabsTrigger>
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="models">Models</TabsTrigger>
-
             <TabsTrigger value="insight-types">Insight Types</TabsTrigger>
             <TabsTrigger value="about">About / MCP</TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="general" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="general" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <Card>
               <CardHeader>
@@ -752,20 +742,11 @@ export function SettingsPage() {
                       Clean up audio before transcription for better accuracy
                     </p>
                   </div>
-                  <button
-                    role="switch"
-                    aria-checked={denoiseEnabled}
-                    onClick={() => toggleDenoise(!denoiseEnabled)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                      denoiseEnabled ? "bg-primary" : "bg-input"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out ${
-                        denoiseEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                  <Switch
+                    checked={denoiseEnabled}
+                    onCheckedChange={toggleDenoise}
+                    aria-label="Noise cancellation"
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
@@ -774,20 +755,11 @@ export function SettingsPage() {
                       Get notified when a meeting is detected so you can start recording
                     </p>
                   </div>
-                  <button
-                    role="switch"
-                    aria-checked={detectionEnabled}
-                    onClick={() => toggleDetection(!detectionEnabled)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                      detectionEnabled ? "bg-primary" : "bg-input"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out ${
-                        detectionEnabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                  <Switch
+                    checked={detectionEnabled}
+                    onCheckedChange={toggleDetection}
+                    aria-label="Auto-detect meetings"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -795,7 +767,7 @@ export function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="api-keys" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="api-keys" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <Card>
               <CardHeader>
@@ -843,26 +815,26 @@ export function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="integrations" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="integrations" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <IntegrationsManager />
           </div>
         </TabsContent>
 
-        <TabsContent value="models" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="models" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <ModelManagementCard />
           </div>
         </TabsContent>
 
 
-        <TabsContent value="insight-types" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="insight-types" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <InsightTypesManager />
           </div>
         </TabsContent>
 
-        <TabsContent value="about" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="about" className="mt-0 flex-1 overflow-auto">
           <div className="flex flex-col gap-8 p-6 max-w-3xl">
             <Card>
               <CardHeader>
@@ -879,54 +851,28 @@ export function SettingsPage() {
                     server:
                   </p>
                   <div className="relative">
-                    <pre className="rounded-lg bg-muted p-4 text-xs font-mono overflow-x-auto">
-                      {getMcpConfig(exePath)}
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs">
+                      {mcpConfig}
                     </pre>
-                    <Button
-                      variant="secondary"
-                      size="xs"
+                    <CopyButton
+                      variant="button"
+                      text={mcpConfig}
                       className="absolute top-2 right-2"
-                      onClick={handleCopyJson}
-                    >
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={copied === "json" ? "check" : "copy"}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: copied === "json" ? [1, 1.2, 1] : 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          {copied === "json" ? "\u2713 Copied" : "Copy"}
-                        </motion.span>
-                      </AnimatePresence>
-                    </Button>
+                    />
                   </div>
-                  <h3 className="text-sm font-medium mt-4 mb-2">Claude Code</h3>
-                  <p className="text-xs text-muted-foreground mb-3">
+                  <h3 className="mt-4 mb-2 text-sm font-medium">Claude Code</h3>
+                  <p className="mb-3 text-xs text-muted-foreground">
                     Or install directly with Claude Code:
                   </p>
                   <div className="relative">
-                    <pre className="rounded-lg bg-muted p-4 text-xs font-mono overflow-x-auto">
-                      {getClaudeCommand(exePath)}
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs">
+                      {claudeCommand}
                     </pre>
-                    <Button
-                      variant="secondary"
-                      size="xs"
+                    <CopyButton
+                      variant="button"
+                      text={claudeCommand}
                       className="absolute top-2 right-2"
-                      onClick={handleCopyClaude}
-                    >
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={copied === "claude" ? "check" : "copy"}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: copied === "claude" ? [1, 1.2, 1] : 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          {copied === "claude" ? "\u2713 Copied" : "Copy"}
-                        </motion.span>
-                      </AnimatePresence>
-                    </Button>
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -978,11 +924,8 @@ function PermissionsCard() {
   }, [refresh]);
 
   const statusBadge = (granted: boolean) => (
-    <Badge
-      variant="secondary"
-      className={granted ? "bg-green-500/15 text-green-500 text-[10px]" : "text-[10px]"}
-    >
-      {granted ? "Granted" : "Not Granted"}
+    <Badge variant={granted ? "success" : "secondary"} size="sm">
+      {granted ? "Granted" : "Not granted"}
     </Badge>
   );
 
@@ -1002,7 +945,7 @@ function PermissionsCard() {
       </CardHeader>
       <CardContent>
         {!permissions ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <LoadingState message={LOADING_COPY.permissions} layout="inline" />
         ) : (
           <div className="divide-y">
             {rows.map((row) => (
@@ -1103,14 +1046,10 @@ function ModelManagementCard() {
                         {model.name}
                       </span>
                       <Badge
-                        variant="secondary"
-                        className={
-                          model.downloaded
-                            ? "bg-green-500/15 text-green-500 text-[10px]"
-                            : "text-[10px]"
-                        }
+                        variant={model.downloaded ? "success" : "secondary"}
+                        size="sm"
                       >
-                        {model.downloaded ? "Downloaded" : "Not Downloaded"}
+                        {model.downloaded ? "Downloaded" : "Not downloaded"}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">

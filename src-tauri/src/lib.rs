@@ -299,6 +299,7 @@ pub fn run() {
             commands::delete_meeting,
             commands::update_meeting_status,
             commands::update_meeting_title,
+            commands::update_meeting_template,
             commands::create_label,
             commands::list_labels,
             commands::update_label,

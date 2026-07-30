@@ -5,15 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { formatDate, statusLabel, labelTextColor } from "@/lib/utils";
 import { useCompactMode } from "@/contexts/CompactModeContext";
-
-const LOADING_MESSAGES = [
-  "Warming up the noodles...",
-  "Untangling the transcript...",
-  "Slurping through the data...",
-  "Almost there, just al dente...",
-  "Stirring the meeting pot...",
-  "Draining the audio linguine...",
-];
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import {
+  LoadingState,
+  randomMeetingsLoadingMessage,
+} from "@/components/LoadingState";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -95,10 +92,7 @@ export function MeetingLibrary() {
   });
   const [showArchived, setShowArchived] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Meeting | null>(null);
-  const [loadingMessage] = useState(
-    () =>
-      LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)],
-  );
+  const [loadingMessage] = useState(randomMeetingsLoadingMessage);
   const [activeLabelIds, setActiveLabelIds] = useState<Set<string>>(new Set());
 
   // Debounce search input so we don't hit the backend on every keystroke.
@@ -133,6 +127,11 @@ export function MeetingLibrary() {
         const meetingLabelIds = new Set(meetingLabels.map((t) => t.id));
         return Array.from(activeLabelIds).every((labelId) => meetingLabelIds.has(labelId));
       });
+
+  // Drives the empty state copy: "no results" reads very differently from
+  // "you haven't recorded anything yet".
+  const hasFilters =
+    debouncedSearch.trim().length > 0 || activeLabelIds.size > 0;
 
   const handleViewModeChange = useCallback((mode: "grid" | "list") => {
     setViewMode(mode);
@@ -187,13 +186,10 @@ export function MeetingLibrary() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Header */}
-      <div className="border-b px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Meetings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your recorded meetings and transcriptions
-        </p>
-      </div>
+      <PageHeader
+        title="Meetings"
+        description="Your recorded meetings and transcriptions"
+      />
 
       <div className="flex flex-1 flex-col gap-5 overflow-auto p-6">
       {/* Search and filters */}
@@ -281,31 +277,27 @@ export function MeetingLibrary() {
 
       {/* Meeting content */}
       {loading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-sm text-muted-foreground">{loadingMessage}</p>
-        </div>
+        <LoadingState message={loadingMessage} />
       ) : filteredMeetings.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          {search.toLowerCase() === "noodle" ? (
-            <>
-              <span className="text-4xl">{"\uD83C\uDF5C"}</span>
-              <h2 className="text-lg font-medium">
-                You found the secret noodle!
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Unfortunately, it's not a meeting.
-              </p>
-            </>
-          ) : (
-            <>
-              <Mic className="h-10 w-10 text-muted-foreground" />
-              <h2 className="text-lg font-medium">No meetings yet</h2>
-              <p className="text-sm text-muted-foreground">
-                Hit record and let Nootle do its thing
-              </p>
-            </>
-          )}
-        </div>
+        search.toLowerCase() === "noodle" ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center">
+            <span className="text-4xl">{"\uD83C\uDF5C"}</span>
+            <h2 className="text-lg font-medium">You found the secret noodle!</h2>
+            <p className="text-sm text-muted-foreground">
+              Unfortunately, it's not a meeting.
+            </p>
+          </div>
+        ) : (
+          <EmptyState
+            icon={Mic}
+            title={hasFilters ? "No matching meetings" : "No meetings yet"}
+            description={
+              hasFilters
+                ? "Try a different search or clear your filters."
+                : "Hit record and let Nootle do its thing"
+            }
+          />
+        )
       ) : viewMode === "grid" ? (
         <div className={`grid gap-4 ${isCompact ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"}`}>
           {filteredMeetings.map((meeting, i) => (

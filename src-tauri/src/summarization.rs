@@ -77,6 +77,10 @@ pub async fn summarize_meeting(
     Ok(summary)
 }
 
+/// Summarizes a finished meeting without user input.
+///
+/// A template picked for this specific meeting during recording wins; otherwise
+/// every template marked auto-run is applied.
 pub async fn run_auto_templates(
     db: &Database,
     llm: &LlmRegistry,
@@ -84,7 +88,17 @@ pub async fn run_auto_templates(
     provider_name: &str,
     model: &str,
 ) -> anyhow::Result<Vec<Summary>> {
-    let templates = db.get_auto_run_templates()?;
+    let selected = db
+        .get_meeting(meeting_id)
+        .ok()
+        .and_then(|meeting| meeting.template_id)
+        .and_then(|id| db.get_template(&id).ok());
+
+    let templates = match selected {
+        Some(template) => vec![template],
+        None => db.get_auto_run_templates()?,
+    };
+
     let mut summaries = Vec::new();
     for template in templates {
         match summarize_meeting(db, llm, meeting_id, &template.id, provider_name, model).await {

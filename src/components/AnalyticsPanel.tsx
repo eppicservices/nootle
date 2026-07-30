@@ -2,18 +2,22 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { BarChart3, RotateCw, Users, Timer, MessageCircleQuestion, Zap } from "lucide-react";
 import { formatMs } from "@/lib/utils";
 import { useGlobalLLMSelection } from "@/contexts/LLMSelectionContext";
 
+// Same order as the speaker colors in MeetingDetail, so a speaker keeps one
+// color between the transcript and these bars.
 const barColors = [
-  "bg-blue-500",
-  "bg-green-500",
-  "bg-amber-500",
-  "bg-purple-500",
-  "bg-pink-500",
-  "bg-cyan-500",
+  "bg-chart-1",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+  "bg-chart-6",
 ];
 
 export function AnalyticsPanel({
@@ -40,6 +44,9 @@ export function AnalyticsPanel({
   const hasSentiment = sentiment.length > 0;
   const totalTalkTime = speakers.reduce((sum, s) => sum + s.talk_time_ms, 0);
   const totalInterruptions = speakers.reduce((sum, s) => sum + s.interruption_count, 0);
+  const sentimentDuration = hasSentiment
+    ? sentiment[sentiment.length - 1].end_ms - sentiment[0].start_ms
+    : 0;
 
   const handleCompute = async () => {
     setComputing(true);
@@ -67,31 +74,26 @@ export function AnalyticsPanel({
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center p-8">
-        <p className="text-sm text-muted-foreground">Tallying up the numbers...</p>
-      </div>
-    );
+    return <LoadingState message={LOADING_COPY.analytics} />;
   }
 
   if (!hasSpeakers && !engagement) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <BarChart3 className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground text-center">
-          No analytics yet. Let Nootle crunch the numbers — who talked the most, how engaged everyone was, and more.
-        </p>
-        <Button
-          size="sm"
-          onClick={handleCompute}
-          disabled={computing}
-        >
-          {computing ? "Crunching..." : "Crunch the Numbers"}
-        </Button>
-        {(actionError || error) && (
-          <p className="text-xs text-destructive text-center">{actionError || error}</p>
-        )}
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        size="panel"
+        description="No analytics yet. Let Nootle crunch the numbers — who talked the most, how engaged everyone was, and more."
+        action={
+          <div className="flex flex-col items-center gap-2">
+            <Button size="sm" onClick={handleCompute} disabled={computing}>
+              {computing ? "Crunching..." : "Crunch the Numbers"}
+            </Button>
+            {(actionError || error) && (
+              <p className="text-xs text-destructive">{actionError || error}</p>
+            )}
+          </div>
+        }
+      />
     );
   }
 
@@ -130,7 +132,7 @@ export function AnalyticsPanel({
           <div className="rounded-lg border p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Timer className="h-3.5 w-3.5" />
-              <span className="text-[10px] uppercase tracking-wider">Duration</span>
+              <span className="text-[10px] uppercase tracking-wider">Talk time</span>
             </div>
             <p className="text-lg font-semibold">{formatMs(totalTalkTime)}</p>
           </div>
@@ -162,12 +164,12 @@ export function AnalyticsPanel({
             <h3 className="text-sm font-semibold">Engagement</h3>
             <div className="flex items-center gap-3">
               <Badge
-                className={
+                variant={
                   engagement.engagement_level === "high"
-                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                    ? "success"
                     : engagement.engagement_level === "medium"
-                      ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                      ? "warning"
+                      : "destructive"
                 }
               >
                 {engagement.engagement_level.charAt(0).toUpperCase() +
@@ -186,17 +188,14 @@ export function AnalyticsPanel({
             <h3 className="text-sm font-semibold">Sentiment Timeline</h3>
             <div className="flex h-4 w-full overflow-hidden rounded-full">
               {sentiment.map((seg) => {
-                const totalDuration =
-                  sentiment.length > 0
-                    ? sentiment[sentiment.length - 1].end_ms - sentiment[0].start_ms
-                    : 1;
                 const segDuration = seg.end_ms - seg.start_ms;
-                const widthPct = totalDuration > 0 ? (segDuration / totalDuration) * 100 : 0;
+                const widthPct =
+                  sentimentDuration > 0 ? (segDuration / sentimentDuration) * 100 : 0;
                 const color =
                   seg.sentiment === "positive"
-                    ? "bg-green-500"
+                    ? "bg-success"
                     : seg.sentiment === "negative"
-                      ? "bg-red-500"
+                      ? "bg-destructive"
                       : "bg-muted-foreground/40";
                 return (
                   <div
@@ -210,13 +209,13 @@ export function AnalyticsPanel({
             </div>
             <div className="flex gap-3 text-[10px] text-muted-foreground">
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-green-500" /> Positive
+                <span className="h-2 w-2 rounded-full bg-success" /> Positive
               </span>
               <span className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/40" /> Neutral
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-red-500" /> Negative
+                <span className="h-2 w-2 rounded-full bg-destructive" /> Negative
               </span>
             </div>
           </div>

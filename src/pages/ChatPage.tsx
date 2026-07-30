@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/EmptyState";
 import { Markdown } from "@/components/Markdown";
 import { ThinkingDots } from "@/components/ThinkingDots";
 import { ResizeHandle } from "@/components/ResizeHandle";
@@ -213,46 +215,45 @@ export function ChatPage() {
               <PanelLeftOpen className="h-4 w-4" />
             </Button>
           )}
-          <select
+          <Select
+            size="xs"
             value={selectedLabel}
             onChange={(e) => setSelectedLabel(e.target.value)}
-            className="h-7 rounded-md border bg-transparent px-2 text-xs"
+            aria-label="Filter by label"
           >
             <option value="">All labels</option>
             {labels.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
-          <input
+          </Select>
+          <Input
             type="date"
             value={dateFromValue}
             onChange={(e) => setDateFromValue(e.target.value)}
-            className="h-7 rounded-md border bg-transparent px-2 text-xs"
-            title="From date"
+            className="h-7 w-auto px-2 text-xs"
+            aria-label="From date"
           />
           <span className="text-xs text-muted-foreground">to</span>
-          <input
+          <Input
             type="date"
             value={dateToValue}
             onChange={(e) => setDateToValue(e.target.value)}
-            className="h-7 rounded-md border bg-transparent px-2 text-xs"
-            title="To date"
+            className="h-7 w-auto px-2 text-xs"
+            aria-label="To date"
           />
         </div>
 
         {/* Messages area */}
         {!activeId ? (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="text-center space-y-3">
-              <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto" />
-              <p className="text-sm text-muted-foreground">
-                Nootle remembers everything from your meetings — just ask
-              </p>
+          <EmptyState
+            icon={MessageSquare}
+            description="Nootle remembers everything from your meetings — just ask"
+            action={
               <Button size="sm" onClick={handleNewConversation}>
-                <Plus className="h-4 w-4 mr-1" /> New Conversation
+                <Plus /> New Conversation
               </Button>
-            </div>
-          </div>
+            }
+          />
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">

@@ -1,0 +1,22 @@
+# Advisories that Trivy reports but that Nootle is not exposed to.
+#
+# Keep this file minimal and justified — every entry is a HIGH/CRITICAL finding
+# the Security Scan would otherwise block on. Re-check an entry whenever the
+# assumptions in its justification change.
+
+# react-router: "RSC Mode CSRF Bypass Allows Action Execution Before 400 Response"
+#
+# Not applicable. The advisory requires React Router's RSC / Framework mode,
+# where the router handles server requests and executes actions. Nootle is a
+# Tauri desktop app: it uses declarative routing only (BrowserRouter + Routes
+# in src/App.tsx), has no server, no React Server Components, and no router
+# loaders or actions. There is no request path for the bypass to affect.
+#
+# It is also unreachable by upgrading: the fix landed in react-router 8.3.0,
+# but react-router-dom has no 8.x line — v8 folded it into the react-router
+# package — so clearing this requires migrating off react-router-dom rather
+# than bumping a version.
+#
+# Revisit if Nootle ever adopts React Router's framework/RSC mode, or when the
+# app migrates to react-router v8 (at which point this entry should be removed).
+GHSA-qwww-vcr4-c8h2

@@ -1,8 +1,8 @@
-import { useState, useCallback } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Markdown } from "@/components/Markdown";
+import { PageHeader } from "@/components/PageHeader";
+import { CopyButton } from "@/components/CopyButton";
 
 import gettingStartedMd from "@/help/getting-started.md?raw";
 import mcpServerMd from "@/help/mcp-server.md?raw";
@@ -20,16 +20,8 @@ const MCP_CONFIG = `{
 }`;
 
 function McpQuickStart() {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(MCP_CONFIG);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, []);
-
   return (
-    <Card className="mb-6">
+    <Card>
       <CardHeader>
         <CardTitle>Quick Start — MCP Config</CardTitle>
         <CardDescription>
@@ -38,17 +30,14 @@ function McpQuickStart() {
       </CardHeader>
       <CardContent>
         <div className="relative">
-          <pre className="rounded-lg bg-muted p-4 text-xs font-mono overflow-x-auto">
+          <pre className="overflow-x-auto rounded-lg bg-muted p-4 font-mono text-xs">
             {MCP_CONFIG}
           </pre>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="absolute top-2 right-2 text-xs"
-            onClick={handleCopy}
-          >
-            {copied ? "Copied!" : "Copy"}
-          </Button>
+          <CopyButton
+            variant="button"
+            text={MCP_CONFIG}
+            className="absolute top-2 right-2"
+          />
         </div>
       </CardContent>
     </Card>
@@ -56,25 +45,23 @@ function McpQuickStart() {
 }
 
 const tabs = [
-  { value: "getting-started", label: "Getting Started", content: gettingStartedMd, description: "Learn the basics of using Nootle" },
-  { value: "mcp-server", label: "MCP Server", content: mcpServerMd, quickStart: true, description: "Connect Nootle to Claude Code and other MCP clients" },
-  { value: "cli-tool", label: "CLI Tool", content: cliToolMd, description: "Query meeting data from the terminal" },
-  { value: "llm-providers", label: "LLM Providers", content: llmProvidersMd, description: "Configure AI providers for transcription and summaries" },
-  { value: "troubleshooting", label: "Troubleshooting", content: troubleshootingMd, description: "Common issues and how to fix them" },
+  { value: "getting-started", label: "Getting Started", content: gettingStartedMd },
+  { value: "mcp-server", label: "MCP Server", content: mcpServerMd, quickStart: true },
+  { value: "cli-tool", label: "CLI Tool", content: cliToolMd },
+  { value: "llm-providers", label: "LLM Providers", content: llmProvidersMd },
+  { value: "troubleshooting", label: "Troubleshooting", content: troubleshootingMd },
 ] as const;
 
 export function HelpPage() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="border-b px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Help</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Learn how to use Nootle and get the most out of your meetings
-        </p>
-      </div>
+      <PageHeader
+        title="Help"
+        description="Learn how to use Nootle and get the most out of your meetings"
+      />
 
       <Tabs defaultValue="getting-started" className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b px-6 py-4">
+        <div className="shrink-0 border-b px-6 py-4">
           <TabsList className="h-10">
             {tabs.map((tab) => (
               <TabsTrigger key={tab.value} value={tab.value}>
@@ -85,12 +72,12 @@ export function HelpPage() {
         </div>
 
         {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value} className="flex-1 mt-0 overflow-auto">
-            <div className="flex flex-col gap-6 px-6 py-4 max-w-3xl">
+          <TabsContent key={tab.value} value={tab.value} className="mt-0 flex-1 overflow-auto">
+            <div className="flex max-w-3xl flex-col gap-6 p-6">
               {"quickStart" in tab && tab.quickStart && <McpQuickStart />}
               <Card>
                 <CardContent>
-                    <Markdown content={tab.content} />
+                  <Markdown content={tab.content} />
                 </CardContent>
               </Card>
             </div>

@@ -9,8 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useWorkflows } from "@/hooks/useWorkflows";
 import { useIntegrations } from "@/hooks/useIntegrations";
@@ -174,14 +177,15 @@ export function WorkflowsManager() {
             </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Integration *</label>
-              <select
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              <Select
+                containerClassName="w-full"
                 value={formIntegrationId}
                 onChange={(e) => {
                   setFormIntegrationId(e.target.value);
                   setFormActionType("");
                   setFormConfig({});
                 }}
+                aria-label="Integration"
               >
                 <option value="">Select integration...</option>
                 {connectedIntegrations.map((i) => (
@@ -189,24 +193,25 @@ export function WorkflowsManager() {
                     {INTEGRATION_TYPES.find((t) => t.type === i.integration_type)?.name ?? i.integration_type}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             {selectedIntegrationType && (
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Action *</label>
-                <select
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                <Select
+                  containerClassName="w-full"
                   value={formActionType}
                   onChange={(e) => {
                     setFormActionType(e.target.value);
                     setFormConfig({});
                   }}
+                  aria-label="Action"
                 >
                   <option value="">Select action...</option>
                   {availableActions.map((a) => (
                     <option key={a.value} value={a.value}>{a.label}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
             {selectedAction && selectedAction.configFields.map((field) => (
@@ -215,11 +220,12 @@ export function WorkflowsManager() {
                   {field.label}{field.required ? " *" : ""}
                 </label>
                 {field.key === "template_id" ? (
-                  <select
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                  <Select
+                    containerClassName="w-full"
                     value={formConfig[field.key] ?? ""}
                     onChange={(e) => setFormConfig((prev) => ({ ...prev, [field.key]: e.target.value }))}
                     title={field.placeholder}
+                    aria-label={field.label}
                   >
                     <option value="">No source template</option>
                     {templates.map((t) => (
@@ -227,7 +233,7 @@ export function WorkflowsManager() {
                         {t.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : (
                   <Input
                     placeholder={field.placeholder}
@@ -252,7 +258,7 @@ export function WorkflowsManager() {
 
       <CardContent>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <LoadingState message={LOADING_COPY.workflows} layout="inline" />
         ) : (
           <div className="space-y-3">
             {workflows.length === 0 && editing === null ? (
@@ -267,7 +273,7 @@ export function WorkflowsManager() {
                       <div className="flex items-center gap-2">
                         {wf.icon && <span className="text-sm">{wf.icon}</span>}
                         <span className="text-sm font-medium">{wf.name}</span>
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" size="sm">
                           {getIntegrationTypeName(wf.integration_id)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{wf.action_type}</span>
@@ -277,19 +283,12 @@ export function WorkflowsManager() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleEnabled(wf)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                          wf.is_enabled ? "bg-primary" : "bg-input"
-                        }`}
+                      <Switch
+                        checked={wf.is_enabled}
+                        onCheckedChange={() => handleToggleEnabled(wf)}
                         title={wf.is_enabled ? "Enabled" : "Disabled"}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out ${
-                            wf.is_enabled ? "translate-x-4" : "translate-x-0"
-                          }`}
-                        />
-                      </button>
+                        aria-label={`Enable ${wf.name}`}
+                      />
                       <Button
                         variant="ghost"
                         size="icon-sm"

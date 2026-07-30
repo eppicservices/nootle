@@ -9,6 +9,7 @@ import { useGlobalLLMSelection } from "@/contexts/LLMSelectionContext";
 import { useCompactMode } from "@/contexts/CompactModeContext";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { MotionButton } from "@/components/MotionButton";
 import { NootleLogo } from "@/components/NootleLogo";
 import { Mic, Settings, HelpCircle, Circle, Moon, Sun, Lightbulb, MessageSquare, FileText, Bot, PanelLeftClose, PanelLeftOpen } from "lucide-react";
@@ -157,28 +158,30 @@ export function Sidebar() {
             </PopoverTrigger>
             <PopoverContent side="top" align="start" className="w-56 p-2">
               <div className="space-y-2">
-                <select
+                <Select
+                  size="xs"
+                  containerClassName="w-full"
                   value={selectedProvider}
                   onChange={(e) => changeProvider(e.target.value)}
                   aria-label="LLM provider"
-                  className="h-7 w-full rounded-md border bg-transparent px-2 text-xs"
                 >
                   <option value="">Provider</option>
                   {providers.map((p) => (
                     <option key={p} value={p}>{p}</option>
                   ))}
-                </select>
-                <select
+                </Select>
+                <Select
+                  size="xs"
+                  containerClassName="w-full"
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                   aria-label="LLM model"
-                  className="h-7 w-full rounded-md border bg-transparent px-2 text-xs"
                 >
                   <option value="">Model</option>
                   {filteredModels.map((m) => (
                     <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             </PopoverContent>
           </Popover>

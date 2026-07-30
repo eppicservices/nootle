@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useScratchPad } from "@/hooks/useScratchPad";
 import { Collapsible } from "@/components/Collapsible";
 import { ChevronDown, ChevronRight, X, StickyNote } from "lucide-react";
@@ -62,9 +63,9 @@ export function ScratchPad({ meetingId, elapsedMs }: ScratchPadProps) {
         <StickyNote className="h-3.5 w-3.5" />
         Quick Notes
         {notes.length > 0 && (
-          <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400">
+          <Badge variant="warning" size="sm">
             {notes.length}
-          </span>
+          </Badge>
         )}
       </button>
       <Collapsible open={isOpen}>
@@ -98,9 +99,9 @@ export function ScratchPad({ meetingId, elapsedMs }: ScratchPadProps) {
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
-                      className="flex items-start gap-2 rounded-md bg-amber-500/5 border border-amber-500/10 px-2.5 py-1.5 group"
+                      className="group flex items-start gap-2 rounded-md border border-highlight/20 bg-highlight/5 px-2.5 py-1.5"
                     >
-                      <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
+                      <span className="mt-0.5 shrink-0 font-mono text-xs text-highlight-foreground">
                         {formatMs(note.timestamp_ms)}
                       </span>
                       <span className="text-xs text-foreground flex-1 leading-relaxed">

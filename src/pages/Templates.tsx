@@ -3,8 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { MotionButton } from "@/components/MotionButton";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState, LOADING_COPY } from "@/components/LoadingState";
 import {
   Tabs,
   TabsList,
@@ -22,7 +28,7 @@ import {
 import { useTemplates } from "@/hooks/useTemplates";
 
 import { useRecipes } from "@/hooks/useRecipes";
-import { FileText, Pencil, Trash2, Sparkles, Star, ChefHat } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2, Sparkles, Star, ChefHat } from "lucide-react";
 import type { Template, Recipe } from "@/types";
 import { WorkflowsManager } from "@/components/WorkflowsManager";
 
@@ -161,30 +167,34 @@ export function TemplatesPage() {
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="border-b px-6 py-4">
-        <h1 className="text-2xl font-bold tracking-tight">Automations</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Configure how meetings are summarized and create slash-command shortcuts
-        </p>
-      </div>
+      <PageHeader
+        title="Automations"
+        description="Configure how meetings are summarized and create slash-command shortcuts"
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col overflow-hidden">
-        <div className="border-b px-6 py-4 flex items-center justify-between">
+        <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
           <TabsList className="h-10">
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="recipes">Slash Commands</TabsTrigger>
             <TabsTrigger value="post-meeting">Workflows</TabsTrigger>
           </TabsList>
           {activeTab === "templates" && (
-            <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>+ Add Template</Button>
+            <Button size="sm" variant="outline" onClick={() => setDialogOpen(true)}>
+              <Plus /> Add Template
+            </Button>
           )}
           {activeTab === "recipes" && (
-            <Button size="sm" variant="outline" onClick={() => setRecipeDialogOpen(true)}>+ Add Slash Command</Button>
+            <Button size="sm" variant="outline" onClick={() => setRecipeDialogOpen(true)}>
+              <Plus /> Add Slash Command
+            </Button>
           )}
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              if (!open) resetForm();
-              else setDialogOpen(true);
-            }}>
+        </div>
+
+        <Dialog open={dialogOpen} onOpenChange={(open) => {
+          if (!open) resetForm();
+          else setDialogOpen(true);
+        }}>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>{editingTemplate ? "Edit Template" : "New Template"}</DialogTitle>
@@ -215,44 +225,29 @@ export function TemplatesPage() {
                       <label className="text-sm font-medium mb-1.5 block">
                         AI Prompt
                       </label>
-                      <textarea
+                      <Textarea
                         placeholder="e.g., Summarize this meeting transcript. Include key discussion points, decisions made, and action items."
                         value={newPrompt}
                         onChange={(e) => setNewPrompt(e.target.value)}
                         rows={3}
-                        className="w-full rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                       />
                       <p className="mt-1 text-xs text-muted-foreground">
                         Instructions for the AI when summarizing meetings with this template
                       </p>
                     </div>
                     <div className="flex items-center gap-6">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={newFavorite}
-                          onClick={() => setNewFavorite(!newFavorite)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${newFavorite ? "bg-primary" : "bg-muted"}`}
-                        >
-                          <span
-                            className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${newFavorite ? "translate-x-4" : "translate-x-0"}`}
-                          />
-                        </button>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Switch
+                          checked={newFavorite}
+                          onCheckedChange={setNewFavorite}
+                        />
                         Favorite
                       </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <button
-                          type="button"
-                          role="switch"
-                          aria-checked={newAutoRun}
-                          onClick={() => setNewAutoRun(!newAutoRun)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${newAutoRun ? "bg-primary" : "bg-muted"}`}
-                        >
-                          <span
-                            className={`pointer-events-none block h-4 w-4 rounded-full bg-background shadow-sm transition-transform ${newAutoRun ? "translate-x-4" : "translate-x-0"}`}
-                          />
-                        </button>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                        <Switch
+                          checked={newAutoRun}
+                          onCheckedChange={setNewAutoRun}
+                        />
                         Auto-run after recording
                       </label>
                     </div>
@@ -261,24 +256,22 @@ export function TemplatesPage() {
                       <label className="text-sm font-medium mb-1.5 block">
                         Sections (JSON)
                       </label>
-                      <textarea
+                      <Textarea
                         placeholder='e.g., ["Summary", "Action Items", "Decisions"]'
                         value={newSections}
                         onChange={(e) => setNewSections(e.target.value)}
                         rows={2}
-                        className="w-full rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                       />
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1.5 block">
                         Auto-Apply Rules (JSON)
                       </label>
-                      <textarea
+                      <Textarea
                         placeholder='e.g., {"category": "engineering"}'
                         value={newAutoRules}
                         onChange={(e) => setNewAutoRules(e.target.value)}
                         rows={2}
-                        className="w-full rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                       />
                     </div>
                   </div>
@@ -346,12 +339,11 @@ export function TemplatesPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Prompt Template</label>
-                    <textarea
+                    <Textarea
                       placeholder="Use variables: {{transcript}}, {{title}}, {{date}}, {{summary}}"
                       value={recipePromptTemplate}
                       onChange={(e) => setRecipePromptTemplate(e.target.value)}
                       rows={6}
-                      className="w-full rounded-md border bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:border-ring"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       Available variables: {"{{transcript}}"}, {"{{title}}"},{" "}
@@ -360,15 +352,15 @@ export function TemplatesPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 block">Output Format</label>
-                    <select
+                    <Select
+                      containerClassName="w-full"
                       value={recipeOutputFormat}
                       onChange={(e) => setRecipeOutputFormat(e.target.value)}
-                      className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
                     >
                       <option value="markdown">Markdown</option>
                       <option value="plain">Plain Text</option>
                       <option value="json">JSON</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 <DialogFooter>
@@ -387,20 +379,22 @@ export function TemplatesPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-        </div>
 
-        <TabsContent value="templates" className="flex-1 mt-0 overflow-auto">
-          <div className="flex flex-col gap-6 p-8">
+        <TabsContent value="templates" className="mt-0 flex-1 overflow-auto">
+          <div className="flex flex-col gap-6 p-6">
             {loading ? (
-              <p className="text-sm text-muted-foreground">Simmering your templates...</p>
+              <LoadingState message={LOADING_COPY.templates} layout="inline" />
             ) : templates.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
-                <FileText className="h-10 w-10 text-muted-foreground" />
-                <h2 className="text-lg font-medium">No templates yet</h2>
-                <p className="text-sm text-muted-foreground">
-                  Templates shape how Nootle summarizes your meetings — cook up your first one
-                </p>
-              </div>
+              <EmptyState
+                icon={FileText}
+                title="No templates yet"
+                description="Templates shape how Nootle summarizes your meetings — cook up your first one"
+                action={
+                  <Button size="sm" onClick={() => setDialogOpen(true)}>
+                    <Plus /> Add Template
+                  </Button>
+                }
+              />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <AnimatePresence initial={false}>
@@ -443,15 +437,18 @@ export function TemplatesPage() {
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5">
                               {template.is_favorite && (
-                                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                                <Star
+                                  className="h-3.5 w-3.5 fill-highlight text-highlight"
+                                  aria-label="Favorite"
+                                />
                               )}
                               {template.is_auto_run && (
-                                <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
-                                  Auto
-                                </span>
+                                <Badge variant="secondary" size="sm">
+                                  Auto-run
+                                </Badge>
                               )}
                               {template.is_builtin && (
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" size="sm">
                                   Built-in
                                 </Badge>
                               )}
@@ -478,20 +475,21 @@ export function TemplatesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="recipes" className="flex-1 mt-0 overflow-auto">
-          <div className="flex flex-col gap-6 p-8">
+        <TabsContent value="recipes" className="mt-0 flex-1 overflow-auto">
+          <div className="flex flex-col gap-6 p-6">
             {recipesLoading ? (
-              <p className="text-sm text-muted-foreground">
-                Loading slash commands...
-              </p>
+              <LoadingState message={LOADING_COPY.slashCommands} layout="inline" />
             ) : recipes.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
-                <ChefHat className="h-10 w-10 text-muted-foreground" />
-                <h2 className="text-lg font-medium">No slash commands yet</h2>
-                <p className="text-sm text-muted-foreground">
-                  Whip up reusable AI prompts you can trigger with slash commands
-                </p>
-              </div>
+              <EmptyState
+                icon={ChefHat}
+                title="No slash commands yet"
+                description="Whip up reusable AI prompts you can trigger with slash commands"
+                action={
+                  <Button size="sm" onClick={() => setRecipeDialogOpen(true)}>
+                    <Plus /> Add Slash Command
+                  </Button>
+                }
+              />
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <AnimatePresence initial={false}>
@@ -537,11 +535,11 @@ export function TemplatesPage() {
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                                 /{recipe.slash_command}
                               </code>
                               {recipe.is_builtin && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="outline" size="sm">
                                   Built-in
                                 </Badge>
                               )}
@@ -562,8 +560,8 @@ export function TemplatesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="post-meeting" className="flex-1 mt-0 overflow-auto">
-          <div className="p-6 max-w-3xl mx-auto">
+        <TabsContent value="post-meeting" className="mt-0 flex-1 overflow-auto">
+          <div className="max-w-3xl p-6">
             <WorkflowsManager />
           </div>
         </TabsContent>

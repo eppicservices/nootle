@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MotionButton } from "@/components/MotionButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useRecording } from "@/hooks/useRecording";
 import { useTemplates } from "@/hooks/useTemplates";
@@ -109,17 +111,41 @@ export function RecordingView() {
 
   const latestTitleRef = useRef(title);
   latestTitleRef.current = title;
+  const latestTemplateRef = useRef(selectedTemplateId);
+  latestTemplateRef.current = selectedTemplateId;
 
   // Start recording on mount — after event listeners are registered above
   // so we don't miss the transcription-status event from the backend
   useEffect(() => {
     if (!hasStarted) {
       setHasStarted(true);
-      startRecording(latestTitleRef.current, undefined, selectedTemplateId || undefined).catch(() => {
+      startRecording(
+        latestTitleRef.current,
+        undefined,
+        latestTemplateRef.current || undefined,
+      ).catch(() => {
         // Error is captured in useRecording's error state
       });
     }
   }, [hasStarted, startRecording]);
+
+  // Recording starts the moment this view mounts, so a template picked
+  // afterwards has to be pushed to the meeting that's already in flight.
+  const handleTemplateChange = useCallback(
+    async (templateId: string) => {
+      setSelectedTemplateId(templateId);
+      if (!currentMeeting) return;
+      try {
+        await invoke("update_meeting_template", {
+          id: currentMeeting.id,
+          templateId: templateId || null,
+        });
+      } catch (err) {
+        console.error("Failed to update meeting template:", err);
+      }
+    },
+    [currentMeeting],
+  );
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -165,7 +191,7 @@ export function RecordingView() {
       <div className="flex items-center gap-4 border-b px-6 py-3">
         <div className="flex items-center gap-2">
           <motion.div
-            className="h-2.5 w-2.5 rounded-full bg-red-500"
+            className="h-2.5 w-2.5 rounded-full bg-destructive"
             animate={{ opacity: [1, 0.3, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           />
@@ -200,11 +226,12 @@ export function RecordingView() {
 
             <div className="flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-              <select
+              <Select
+                size="xs"
                 value={selectedTemplateId}
-                onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="h-7 rounded-md border bg-transparent px-2 text-xs text-muted-foreground"
-                title="Select template"
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                aria-label="Summary template"
+                title="Summarize with this template when the recording ends"
               >
                 <option value="">No template</option>
                 {templates.map((t) => (
@@ -212,7 +239,7 @@ export function RecordingView() {
                     {t.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </>
         )}
@@ -283,9 +310,9 @@ export function RecordingView() {
           )}
           Live Transcript
           {segments.length > 0 && (
-            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+            <Badge variant="secondary" size="sm">
               {segments.length}
-            </span>
+            </Badge>
           )}
         </button>
         <Collapsible open={transcriptOpen}>
