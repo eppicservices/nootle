@@ -2,6 +2,8 @@ use super::types::{ChatMessage, LlmProvider, ModelInfo};
 use tokio::process::Command;
 
 const CODEX_BIN: &str = "codex";
+/// Sentinel meaning "let codex pick", i.e. pass no --model flag.
+const DEFAULT_MODEL: &str = "default";
 
 pub struct CodexCliProvider;
 
@@ -35,14 +37,25 @@ impl LlmProvider for CodexCliProvider {
 
     fn available_models(&self) -> Vec<ModelInfo> {
         vec![
+            // Listed first so it is what `providers.first()` picks by default.
+            // Pinning a model id here is a trap: ChatGPT-account Codex rejects
+            // explicit ids outright ("The 'gpt-5-codex' model is not supported
+            // when using Codex with a ChatGPT account", HTTP 400), and the
+            // supported set moves with the CLI. Letting codex use its own
+            // configured default works on every auth mode and does not go stale.
+            ModelInfo {
+                id: DEFAULT_MODEL.into(),
+                name: "Codex default (subscription)".into(),
+                provider: "codex-cli".into(),
+            },
             ModelInfo {
                 id: "gpt-5-codex".into(),
-                name: "GPT-5 Codex (subscription)".into(),
+                name: "GPT-5 Codex (API key only)".into(),
                 provider: "codex-cli".into(),
             },
             ModelInfo {
                 id: "gpt-5-codex-mini".into(),
-                name: "GPT-5 Codex Mini (subscription)".into(),
+                name: "GPT-5 Codex Mini (API key only)".into(),
                 provider: "codex-cli".into(),
             },
         ]
@@ -55,10 +68,16 @@ impl LlmProvider for CodexCliProvider {
             .collect::<Vec<_>>()
             .join("\n\n");
 
-        let output = Command::new(CODEX_BIN)
-            .arg("exec")
-            .arg("--model")
-            .arg(model)
+        let mut command = Command::new(CODEX_BIN);
+        command.arg("exec");
+        if !model.is_empty() && model != DEFAULT_MODEL {
+            command.arg("--model").arg(model);
+        }
+        // Without this codex waits on the terminal ("Reading additional input
+        // from stdin..."), which never arrives when it is run as a subprocess.
+        command.stdin(std::process::Stdio::null());
+
+        let output = command
             .arg("--skip-git-repo-check")
             .arg(&prompt)
             .output()
