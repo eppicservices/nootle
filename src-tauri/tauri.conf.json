@@ -40,9 +40,18 @@
     "macOS": {
       "dmg": {
         "background": "dmg/background.png",
-        "appPosition": { "x": 180, "y": 170 },
-        "applicationFolderPosition": { "x": 480, "y": 170 },
-        "windowSize": { "width": 660, "height": 400 }
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        },
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        }
       },
       "entitlements": "entitlements.plist",
       "minimumSystemVersion": "14.0"
@@ -55,6 +64,13 @@
         "https://github.com/michellemayes/nootle/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDIzQzc2OTVEM0RFQ0JGODgKUldTSXYrdzlYV25ISXlxaU80Z0NkTVdnL0ZFUWd0VEZaNXd6MVcyM3hDdlhXZVFNWWFUREJQRi8K"
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "nootle"
+        ]
+      }
     }
   }
 }
