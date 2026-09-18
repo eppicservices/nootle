@@ -70,6 +70,41 @@ pub struct TranscriptionEngine {
     state2_dims: [usize; 3],
 }
 
+/// Build an ONNX session, preferring CoreML but degrading to CPU.
+///
+/// CoreML cannot resolve a model whose weights live in an external data file
+/// (`model.onnx` plus `model.onnx.data`); it fails with
+/// `initializer.cc:45 !model_path.empty() was false`. The Parakeet encoder is
+/// exactly that shape -- 41MB of graph plus 2.4GB of external weights -- so
+/// hard-requiring CoreML made the entire transcription engine fail to load,
+/// and recordings completed with no transcript at all.
+///
+/// Accelerate when we can, stay working when we cannot.
+fn build_session(path: &Path, label: &str) -> anyhow::Result<Session> {
+    let coreml = Session::builder()
+        .and_then(|b| {
+            b.with_execution_providers([
+                ort::execution_providers::CoreMLExecutionProvider::default().build()
+            ])
+        })
+        .and_then(|b| b.commit_from_file(path));
+
+    match coreml {
+        Ok(session) => {
+            tracing::info!("{label}: loaded with CoreML acceleration");
+            Ok(session)
+        }
+        Err(e) => {
+            tracing::warn!("{label}: CoreML unavailable for this model ({e}); using CPU");
+            let session = Session::builder()?
+                .commit_from_file(path)
+                .with_context(|| format!("Failed to load {label} model on CPU"))?;
+            tracing::info!("{label}: loaded on CPU");
+            Ok(session)
+        }
+    }
+}
+
 impl TranscriptionEngine {
     /// Get the directory where models are stored.
     pub fn model_dir() -> PathBuf {
@@ -135,19 +170,8 @@ impl TranscriptionEngine {
         };
 
         // Load ONNX sessions with CoreML EP for Apple Silicon acceleration
-        let encoder = Session::builder()?
-            .with_execution_providers([
-                ort::execution_providers::CoreMLExecutionProvider::default().build(),
-            ])?
-            .commit_from_file(&encoder_path)
-            .context("Failed to load encoder model")?;
-
-        let decoder = Session::builder()?
-            .with_execution_providers([
-                ort::execution_providers::CoreMLExecutionProvider::default().build(),
-            ])?
-            .commit_from_file(&decoder_path)
-            .context("Failed to load decoder model")?;
+        let encoder = build_session(&encoder_path, "encoder")?;
+        let decoder = build_session(&decoder_path, "decoder")?;
 
         // Load vocabulary (format: "token id" per line — extract just the token)
         let vocab_text =
