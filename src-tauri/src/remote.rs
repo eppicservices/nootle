@@ -179,6 +179,32 @@ pub async fn handle_url(app: AppHandle, raw: String) {
                 do_start(&app, title).await
             }
         }
+        // macOS only lists an app under Privacy > Screen Recording once it has
+        // actually asked. Without this there is nothing to toggle, and system
+        // audio -- everyone else's voice -- is silently never captured.
+        "permissions/screen" => {
+            let granted = crate::permissions::request_screen_recording();
+            tracing::info!("remote: screen recording request -> granted={granted}");
+            RemoteResult::ok(
+                "permissions/screen",
+                if granted {
+                    "Screen recording granted"
+                } else {
+                    "Screen recording not granted; enable Nootle under \
+                     Privacy & Security > Screen Recording, then restart it"
+                },
+                None,
+            )
+        }
+        "permissions/status" => {
+            let mic = crate::permissions::check_microphone();
+            let screen = crate::permissions::check_screen_recording();
+            RemoteResult::ok(
+                "permissions/status",
+                format!("microphone={mic} screen_recording={screen}"),
+                None,
+            )
+        }
         "record/status" => {
             let recording = is_recording(&app).await;
             RemoteResult::ok(

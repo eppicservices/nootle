@@ -78,7 +78,13 @@ const PARAKEET_FULL_FILES: &[ModelFile] = &[
         sha256: "98a74b21b4cc0017c1e7030319a4a96f4a9506e50f0708f3a516d02a77c96bb1",
     },
     ModelFile {
-        local_name: "encoder.onnx.data",
+        // MUST stay "encoder-model.onnx.data". encoder.onnx keeps its weights in
+        // an external data file and refers to it by name in the graph, using the
+        // upstream filename. Renaming it to match our local "encoder.onnx" makes
+        // ONNX Runtime unable to find the weights, and the encoder then fails to
+        // load on every execution provider -- recordings complete with no
+        // transcript at all.
+        local_name: "encoder-model.onnx.data",
         url: "https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx/resolve/main/encoder-model.onnx.data",
         size_bytes: 2_440_000_000,
         sha256: "9a22d372c51455c34f13405da2520baefb7125bd16981397561423ed32d24f36",
@@ -301,6 +307,21 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn external_data_keeps_the_name_the_graph_references() {
+        // encoder.onnx names its weights file internally as
+        // "encoder-model.onnx.data". Saving it under any other local name
+        // silently breaks transcription on every execution provider.
+        let (model, variant) = get_variant("parakeet-tdt-0.6b-v3", "full").unwrap();
+        let _ = model;
+        let data = variant
+            .files
+            .iter()
+            .find(|f| f.url.ends_with(".onnx.data"))
+            .expect("fp32 variant must ship an external data file");
+        assert_eq!(data.local_name, "encoder-model.onnx.data");
+    }
+
     fn parakeet_has_two_variants() {
         let model = get_model("parakeet-tdt-0.6b-v3").unwrap();
         assert_eq!(model.variants.len(), 2);
