@@ -838,6 +838,26 @@ pub async fn stop_recording(
                     {
                         tracing::warn!("Auto-extraction failed: {e}");
                     }
+
+                    // Workflows opted in with `"auto_run": true` fire once
+                    // insights exist, so an export lands without the user
+                    // opening the app and clicking per meeting.
+                    //
+                    // Opt-in, never all-enabled-workflows: the same mechanism
+                    // drives Slack, Linear, GitHub and Notion, and silently
+                    // messaging a channel because a meeting ended is not a
+                    // surprise anyone wants.
+                    let provider_owned = provider_name.clone();
+                    let model_owned = model.id.clone();
+                    drop(registry);
+                    run_auto_workflows(
+                        &db_clone,
+                        &llm_clone,
+                        &mid,
+                        &provider_owned,
+                        &model_owned,
+                    )
+                    .await;
                 }
             }
         });
@@ -2060,10 +2080,112 @@ pub fn list_workflow_runs(
         .map_err(|e| e.to_string())
 }
 
+/// How long to wait for the summary before exporting without one.
+const SUMMARY_WAIT_ATTEMPTS: u32 = 30;
+const SUMMARY_WAIT_INTERVAL_SECS: u64 = 4;
+
+/// Run every enabled workflow that opted into `auto_run` for this meeting.
+///
+/// Failures are logged and never propagated: a broken export must not take down
+/// the recording that produced it.
+async fn run_auto_workflows(
+    db: &DbState,
+    llm: &LlmState,
+    meeting_id: &str,
+    provider: &str,
+    model: &str,
+) {
+    let workflows = match db.list_workflows() {
+        Ok(w) => w,
+        Err(e) => {
+            tracing::warn!("Auto-workflows: could not list workflows: {e}");
+            return;
+        }
+    };
+
+    let has_auto = workflows.iter().any(|w| {
+        w.is_enabled
+            && serde_json::from_str::<serde_json::Value>(&w.config_json)
+                .ok()
+                .and_then(|c| c.get("auto_run").and_then(|v| v.as_bool()))
+                == Some(true)
+    });
+    if !has_auto {
+        return;
+    }
+
+    // Summaries are produced by the transcription pipeline, which runs
+    // concurrently with extraction -- so by the time we get here the summary
+    // may not exist yet, and the export would write "No summary available".
+    // Wait for it rather than racing, but never block forever: a meeting whose
+    // summary genuinely fails should still export its action items.
+    for attempt in 0..SUMMARY_WAIT_ATTEMPTS {
+        match db.get_summaries_for_meeting(meeting_id) {
+            Ok(s) if !s.is_empty() => break,
+            Ok(_) => {
+                if attempt + 1 == SUMMARY_WAIT_ATTEMPTS {
+                    tracing::warn!(
+                        "Auto-workflows: no summary for {meeting_id} after waiting; exporting anyway"
+                    );
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(SUMMARY_WAIT_INTERVAL_SECS)).await;
+            }
+            Err(e) => {
+                tracing::warn!("Auto-workflows: could not read summaries: {e}");
+                break;
+            }
+        }
+    }
+
+    for workflow in workflows.into_iter().filter(|w| w.is_enabled) {
+        let config: serde_json::Value =
+            serde_json::from_str(&workflow.config_json).unwrap_or_else(|_| serde_json::json!({}));
+        if config.get("auto_run").and_then(|v| v.as_bool()) != Some(true) {
+            continue;
+        }
+
+        tracing::info!("Auto-workflow '{}' running for meeting {meeting_id}", workflow.name);
+        match run_workflow_inner(
+            db,
+            llm,
+            meeting_id.to_string(),
+            workflow.id.clone(),
+            Some(provider.to_string()),
+            Some(model.to_string()),
+        )
+        .await
+        {
+            Ok(_) => tracing::info!("Auto-workflow '{}' succeeded", workflow.name),
+            Err(e) => tracing::warn!("Auto-workflow '{}' failed: {e}", workflow.name),
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn run_workflow(
     db: State<'_, DbState>,
     llm: State<'_, LlmState>,
+    meeting_id: String,
+    workflow_id: String,
+    llm_provider: Option<String>,
+    llm_model: Option<String>,
+) -> Result<crate::db::WorkflowRun, String> {
+    run_workflow_inner(
+        db.inner(),
+        llm.inner(),
+        meeting_id,
+        workflow_id,
+        llm_provider,
+        llm_model,
+    )
+    .await
+}
+
+/// The body of `run_workflow`, callable from background tasks that hold the
+/// state Arcs directly rather than Tauri `State` guards.
+pub async fn run_workflow_inner(
+    db: &DbState,
+    llm: &LlmState,
     meeting_id: String,
     workflow_id: String,
     llm_provider: Option<String>,
