@@ -810,11 +810,21 @@ pub async fn stop_recording(
         tokio::spawn(async move {
             let registry = llm_clone.read().await;
             let providers = registry.provider_names();
-            if let Some(provider_name) = providers.first() {
+            // Honour an explicit choice before falling back to registration
+            // order. Order is a fragile default: which provider summarises your
+            // meetings then depends on which ones happen to be installed, and
+            // standing up a new one silently moves your transcripts to a
+            // different vendor. Set `summarization_provider` to pin it.
+            let preferred = db_clone
+                .get_setting("summarization_provider")
+                .unwrap_or(None)
+                .filter(|p| providers.iter().any(|name| name == p));
+            let chosen = preferred.clone().or_else(|| providers.first().cloned());
+            if let Some(provider_name) = chosen.as_ref() {
                 let models = registry.all_models();
                 let provider_models: Vec<_> = models
                     .iter()
-                    .filter(|m| m.provider == *provider_name)
+                    .filter(|m| &m.provider == provider_name)
                     .collect();
                 if let Some(model) = provider_models.first() {
                     if let Err(e) = crate::extraction::extract_insights(
