@@ -16,20 +16,11 @@ const CHAT_TIMEOUT: Duration = Duration::from_secs(300);
 
 impl ClaudeAgentProvider {
     pub fn detect() -> Option<Self> {
-        let output = std::process::Command::new("sh")
-            .arg("-c")
-            .arg("command -v claude")
-            .output()
-            .ok()?;
-        if !output.status.success() {
-            return None;
-        }
-        let path = String::from_utf8(output.stdout).ok()?.trim().to_string();
-        if path.is_empty() {
-            None
-        } else {
-            Some(Self { binary_path: path })
-        }
+        // `sh -c "command -v claude"` is not enough: a non-login shell inherits
+        // the GUI app's bare PATH, so the CLI is invisible when Nootle is
+        // launched from Finder or a nootle:// URL rather than a terminal.
+        let path = super::bin_resolve::resolve("claude")?;
+        Some(Self { binary_path: path })
     }
 
     pub fn binary_path(&self) -> &str {

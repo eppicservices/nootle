@@ -151,6 +151,67 @@ async fn do_stop(app: &AppHandle) -> RemoteResult {
     }
 }
 
+/// Emit a result and return it, so early exits still surface in the UI.
+fn emit(app: &AppHandle, result: RemoteResult) -> RemoteResult {
+    let _ = app.emit("remote-control-result", &result);
+    result
+}
+
+/// Re-run summarisation and extraction over an existing transcript.
+async fn reprocess(app: &AppHandle, meeting_id: String) -> RemoteResult {
+    let db = app.state::<DbState>();
+    let llm = app.state::<LlmState>();
+
+    let (provider, model) = {
+        let registry = llm.read().await;
+        let names = registry.provider_names();
+        let preferred = db
+            .get_setting("summarization_provider")
+            .unwrap_or(None)
+            .filter(|p| names.iter().any(|n| n == p));
+        let Some(provider) = preferred.or_else(|| names.first().cloned()) else {
+            return RemoteResult::err("reprocess", "no LLM provider available");
+        };
+        let models = registry.all_models();
+        let Some(model) = models.iter().find(|m| m.provider == provider).map(|m| m.id.clone())
+        else {
+            return RemoteResult::err("reprocess", format!("no model for provider {provider}"));
+        };
+        (provider, model)
+    };
+
+    tracing::info!("remote: reprocessing {meeting_id} with {provider}/{model}");
+
+    let templates = db.list_templates().unwrap_or_default();
+    let mut summaries = 0usize;
+    for template in templates.iter().filter(|t| t.is_auto_run) {
+        let registry = llm.read().await;
+        match crate::summarization::summarize_meeting(
+            &db, &registry, &meeting_id, &template.id, &provider, &model,
+        )
+        .await
+        {
+            Ok(_) => summaries += 1,
+            Err(e) => tracing::warn!("reprocess: template {} failed: {e}", template.id),
+        }
+    }
+
+    let extracted = {
+        let registry = llm.read().await;
+        crate::extraction::extract_insights(&db, &registry, &meeting_id, &provider, &model).await
+    };
+    if let Err(e) = extracted {
+        return RemoteResult::err("reprocess", format!("extraction failed: {e}"));
+    }
+
+    let _ = db.update_meeting_status(&meeting_id, "summarized");
+    RemoteResult::ok(
+        "reprocess",
+        format!("{summaries} summary/summaries + insights regenerated via {provider}"),
+        Some(meeting_id),
+    )
+}
+
 /// Handle one `nootle://` URL. Never panics, never blocks the caller.
 pub async fn handle_url(app: AppHandle, raw: String) {
     let url = match Url::parse(&raw) {
@@ -195,6 +256,33 @@ pub async fn handle_url(app: AppHandle, raw: String) {
                 },
                 None,
             )
+        }
+        // Recover a meeting whose transcript survived but whose LLM pass did
+        // not. That happened for real: launched from a nootle:// URL the app
+        // had no provider on PATH, so a 41-minute meeting transcribed fine and
+        // then produced no summary, no insights and no export -- with nothing
+        // to re-run it short of recording the meeting again.
+        //
+        //   nootle://meeting/reprocess?id=<meeting id>   (omit id for the latest)
+        "meeting/reprocess" => {
+            let meeting_id = match query_value(&url, "id") {
+                Some(id) => id,
+                None => {
+                    let db = app.state::<DbState>();
+                    match db.list_meetings(None, false) {
+                        Ok(list) if !list.is_empty() => list[0].id.clone(),
+                        Ok(_) => {
+                            emit(&app, RemoteResult::err("reprocess", "no meetings"));
+                            return;
+                        }
+                        Err(e) => {
+                            emit(&app, RemoteResult::err("reprocess", e.to_string()));
+                            return;
+                        }
+                    }
+                }
+            };
+            reprocess(&app, meeting_id).await
         }
         "permissions/status" => {
             let mic = crate::permissions::check_microphone();

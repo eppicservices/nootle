@@ -1,3 +1,4 @@
+pub mod bin_resolve;
 pub mod anthropic;
 pub mod bedrock;
 pub mod claude_agent;

@@ -1,7 +1,11 @@
 use super::types::{ChatMessage, LlmProvider, ModelInfo};
 use tokio::process::Command;
 
-const CODEX_BIN: &str = "codex";
+/// Resolved at call time, never assumed to be on PATH -- a GUI-launched app
+/// gets /usr/bin:/bin:/usr/sbin:/sbin and would silently find no provider.
+fn codex_bin() -> Option<String> {
+    super::bin_resolve::resolve("codex")
+}
 /// Sentinel meaning "let codex pick", i.e. pass no --model flag.
 const DEFAULT_MODEL: &str = "default";
 
@@ -19,7 +23,11 @@ impl CodexCliProvider {
     }
 
     pub fn is_available() -> bool {
-        std::process::Command::new(CODEX_BIN)
+        let Some(bin) = codex_bin() else {
+            tracing::info!("codex CLI not found in any known location");
+            return false;
+        };
+        std::process::Command::new(bin)
             .arg("--version")
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -68,7 +76,9 @@ impl LlmProvider for CodexCliProvider {
             .collect::<Vec<_>>()
             .join("\n\n");
 
-        let mut command = Command::new(CODEX_BIN);
+        let bin = codex_bin()
+            .ok_or_else(|| anyhow::anyhow!("codex CLI not found in any known location"))?;
+        let mut command = Command::new(bin);
         command.arg("exec");
         if !model.is_empty() && model != DEFAULT_MODEL {
             command.arg("--model").arg(model);
